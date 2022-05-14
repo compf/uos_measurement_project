@@ -39,14 +39,15 @@ class AbstractWeatherAPI:
         pass
 def main():
     apis=[WeatherAPI,WeatherBitIO,AccuWeather,OpenWeatherMap]
-    for api in apis:
-        print(str(api))
+    for api_type in apis:
+        print(str(api_type))
+        api=api_type()
         res=api.load_data(LAAR_LAT,LAAR_LON)
         print(res)
    
     
 class WeatherBitIO(AbstractWeatherAPI):
-    def load_data(lat:float,lon:float)-> WeatherInformation:
+    def load_data(self,lat:float,lon:float)-> WeatherInformation:
         apikey = '7d655bb508cd4716b40f67d2cc87878f'
         url = f"https://api.weatherbit.io/v2.0/current?&lat={lat}&lon={lon}&key={apikey}&include=minutely"
         response = requests.get(url)
@@ -68,7 +69,7 @@ class WeatherBitIO(AbstractWeatherAPI):
 
         return(info)
 class WeatherAPI(AbstractWeatherAPI):
-    def load_data(lat:float, lon:float):
+    def load_data(self,lat:float, lon:float):
         apikey = '690ba17ef992471e988115539221305'
         url = f'http://api.weatherapi.com/v1/current.json?key={apikey}&q={lat},{lon}'
         response = requests.get(url)
@@ -91,7 +92,7 @@ class WeatherAPI(AbstractWeatherAPI):
         
         return info
 class AccuWeather(AbstractWeatherAPI):
-    def load_data(lat:float,lon:float):
+    def load_data(self,lat:float,lon:float):
         apikey = 'Uh8LxD0mRtzAjgK7A0BQl6AIz4Dnl9HG'
         url = f'http://dataservice.accuweather.com/locations/v1/cities/geoposition/search?apikey={apikey}&q={lat},{lon}'
         response = requests.get(url)
@@ -118,7 +119,7 @@ class AccuWeather(AbstractWeatherAPI):
 
         return info
 class OpenWeatherMap(AbstractWeatherAPI):
-    def load_data(lat:float,lon:float):
+    def load_data(self,lat:float,lon:float):
 
         apikey = '27a0231c6a206d1fffeba8a2d00e968f'
         url = f'https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={apikey}&units=metric'
