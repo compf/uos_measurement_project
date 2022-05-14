@@ -1,7 +1,7 @@
 import http.client
 #from weatherbit.api import Api
 import requests
-
+from datetime import datetime
 LAAR_LAT=52.5761865151627
 LAAR_LON=6.754423961898484
 class WeatherInformation:
@@ -38,7 +38,7 @@ class AbstractWeatherAPI:
     def load_data(lat:float,lon:float)-> WeatherInformation:
         pass
 def main():
-    apis=[WeatherAPI,WeatherBitIO,AccuWeather,OpenWeatherMap]
+    apis=[WeatherBitIO,WeatherAPI,AccuWeather,OpenWeatherMap,BuienRadar]
     for api_type in apis:
         print(str(api_type))
         api=api_type()
@@ -147,6 +147,32 @@ class OpenWeatherMap(AbstractWeatherAPI):
     
     
        
+class BuienRadar(AbstractWeatherAPI):
+    # Credit https://www.buienradar.nl
+    def distance(self,x1:float,y1:float,x2:float,y2:float):
+        dx=x1-x2
+        dy=y1-y2
+        return dx*dx+dy*dy
+    def load_data(self,lat: float, lon: float) -> WeatherInformation:
+        CLOSEST_STATION=6279 # maybe lookign for closer one, if tehre is one
+        data=requests.request("GET",url="https://data.buienradar.nl/2.0/feed/json")
+        json_obj=data.json()
+        best_station=min([(self.distance(lat,lon,obj["lat"],obj["lon"]),obj) for obj in json_obj["actual"]["stationmeasurements"]])
+        best_station=best_station[1]
 
+        result=WeatherInformation()
+        result.air_pressure=best_station["airpressure"]
+        result.temperature=best_station["temperature"]
+        result.humidity=best_station["humidity"]
+        result.location=(lat,lon)
+        result.rain=best_station["precipitation"] # still need to agree on a common format to describe things like
+        result.sun_rise=json_obj["actual"]["sunrise"]
+        result.sun_set=json_obj["actual"]["sunset"]
+        result.time=datetime.fromisoformat(best_station["timestamp"])
+        result.last_updated=result.time
+        result.thunder=None # maybe extactable from description
+        result.wind_speed=best_station["windspeed"]
+        result.description=best_station["weatherdescription"] # sadly in dutch
+        return result
 if __name__=="__main__":
     main()
