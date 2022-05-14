@@ -2,6 +2,8 @@ import http.client
 #from weatherbit.api import Api
 import requests
 
+LAAR_LAT=52.5761865151627
+LAAR_LON=6.754423961898484
 class WeatherInformation:
     def __init__(self) -> None:
         self.temperature:float=0
@@ -32,19 +34,19 @@ class WeatherInformation:
         "\n description : " + str(self.description)
         )
 
-
-def main():
-    print(AbstractWeatherAPI.get_weatherbit_io(52.283, 8.050))
-    print(AbstractWeatherAPI.get_weatherapi_com(52.283, 8.050))
-    print(AbstractWeatherAPI.get_accuweather_com(52.283, 8.050))
-    print(AbstractWeatherAPI.get_openweathermap_org(52.283, 8.050))
-    
-
 class AbstractWeatherAPI:
-    def loadData()-> WeatherInformation:
+    def load_data(lat:float,lon:float)-> WeatherInformation:
         pass
-
-    def get_weatherbit_io(lat, lon):
+def main():
+    apis=[WeatherAPI,WeatherBitIO,AccuWeather,OpenWeatherMap]
+    for api in apis:
+        print(str(api))
+        res=api.load_data(LAAR_LAT,LAAR_LON)
+        print(res)
+   
+    
+class WeatherBitIO(AbstractWeatherAPI):
+    def load_data(lat:float,lon:float)-> WeatherInformation:
         apikey = '7d655bb508cd4716b40f67d2cc87878f'
         url = f"https://api.weatherbit.io/v2.0/current?&lat={lat}&lon={lon}&key={apikey}&include=minutely"
         response = requests.get(url)
@@ -65,10 +67,8 @@ class AbstractWeatherAPI:
         info.description = data['weather']['description']
 
         return(info)
-
-
-
-    def get_weatherapi_com(lat, lon):
+class WeatherAPI(AbstractWeatherAPI):
+    def load_data(lat:float, lon:float):
         apikey = '690ba17ef992471e988115539221305'
         url = f'http://api.weatherapi.com/v1/current.json?key={apikey}&q={lat},{lon}'
         response = requests.get(url)
@@ -90,9 +90,8 @@ class AbstractWeatherAPI:
 
         
         return info
-
-
-    def get_accuweather_com(lat, lon):
+class AccuWeather(AbstractWeatherAPI):
+    def load_data(lat:float,lon:float):
         apikey = 'Uh8LxD0mRtzAjgK7A0BQl6AIz4Dnl9HG'
         url = f'http://dataservice.accuweather.com/locations/v1/cities/geoposition/search?apikey={apikey}&q={lat},{lon}'
         response = requests.get(url)
@@ -118,8 +117,9 @@ class AbstractWeatherAPI:
         info.description = data[0]['WeatherText']
 
         return info
+class OpenWeatherMap(AbstractWeatherAPI):
+    def load_data(lat:float,lon:float):
 
-    def get_openweathermap_org(lat, lon):
         apikey = '27a0231c6a206d1fffeba8a2d00e968f'
         url = f'https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={apikey}&units=metric'
         response = requests.get(url)
@@ -141,6 +141,11 @@ class AbstractWeatherAPI:
         info.description = data['weather'][0]['description']
 
         return info
+
+   
+    
+    
+       
 
 if __name__=="__main__":
     main()
