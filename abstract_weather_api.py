@@ -153,6 +153,13 @@ class BuienRadar(AbstractWeatherAPI):
         dx=x1-x2
         dy=y1-y2
         return dx*dx+dy*dy
+    def load_rain_data(self,lat:float,lon:float):
+        request_result=requests.request("GET",url=f"https://gpsgadget.buienradar.nl/data/raintext?lat={lat}&lon={lon}")
+        precipitation=request_result.content.decode().split("\n")[0].split("|")[0]
+        precipitation=int(precipitation)
+        if precipitation==0:
+            return 0
+        return 10**((precipitation-109)/32)
     def load_data(self,lat: float, lon: float) -> WeatherInformation:
         CLOSEST_STATION=6279 # maybe lookign for closer one, if tehre is one
         data=requests.request("GET",url="https://data.buienradar.nl/2.0/feed/json")
@@ -165,7 +172,8 @@ class BuienRadar(AbstractWeatherAPI):
         result.temperature=best_station["temperature"]
         result.humidity=best_station["humidity"]
         result.location=(lat,lon)
-        result.rain=best_station["precipitation"] # still need to agree on a common format to describe things like
+        #result.rain=best_station["precipitation"] # still need to agree on a common format to describe things like
+        result.rain=self.load_rain_data(lat,lon)
         result.sun_rise=json_obj["actual"]["sunrise"]
         result.sun_set=json_obj["actual"]["sunset"]
         result.time=datetime.fromisoformat(best_station["timestamp"])
