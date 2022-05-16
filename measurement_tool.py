@@ -1,4 +1,4 @@
-from  pythonping import ping
+import pingparsing
 from abstract_weather_api import *
 import time
 import sys
@@ -19,8 +19,15 @@ def main():
     json_obj["ip"]=PING_IP
     apis=[WeatherBitIO,WeatherAPI,AccuWeather,OpenWeatherMap,BuienRadar]
     weather=get_combined_weather_data(apis)
-    res= ping(PING_IP,verbose=False,count=10)
-    ping_res=PingResult(res.rtt_avg_ms,res.rtt_max_ms,res.rtt_min_ms,res.packet_loss)
+    
+    ping_parser = pingparsing.PingParsing()
+    transmitter = pingparsing.PingTransmitter()
+    transmitter.destination = PING_IP
+    transmitter.count = 10
+    result = transmitter.ping()
+    result=ping_parser.parse(result).as_dict()
+    ping_res=PingResult(result['rtt_avg'],result['rtt_max'],result['rtt_min'],result['packet_loss_rate'])
+    
     json_obj["ping_result"]=ping_res
     json_obj["weather"]=weather
     with open("project_archive/"+str(start_time)+".json","w") as f:

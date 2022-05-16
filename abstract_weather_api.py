@@ -97,6 +97,8 @@ class AccuWeather(AbstractWeatherAPI):
         url = f'http://dataservice.accuweather.com/locations/v1/cities/geoposition/search?apikey={apikey}&q={lat},{lon}'
         response = requests.get(url)
         data = response.json()
+        if "key" not in data:
+            return None
         location_key = data['Key']
 
         url = f'http://dataservice.accuweather.com/currentconditions/v1/{location_key}?apikey={apikey}&q={lat},{lon}&details=true'
