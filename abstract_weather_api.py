@@ -41,8 +41,11 @@ def get_combined_weather_data(apis):
     result={}
     for api_type in apis:
         api=api_type()
-        res=api.load_data(LAAR_LAT,LAAR_LON)
-        result[api_type.__name__]=res
+        try:
+            res=api.load_data(LAAR_LAT,LAAR_LON)
+            result[api_type.__name__]=res
+        except Exception as e:
+            print("ignoring exception",e)
     return result   
    
     
