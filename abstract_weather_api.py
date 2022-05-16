@@ -37,13 +37,13 @@ class WeatherInformation:
 class AbstractWeatherAPI:
     def load_data(lat:float,lon:float)-> WeatherInformation:
         pass
-def main():
-    apis=[WeatherBitIO,WeatherAPI,AccuWeather,OpenWeatherMap,BuienRadar]
+def get_combined_weather_data(apis):
+    result={}
     for api_type in apis:
-        print(str(api_type))
         api=api_type()
         res=api.load_data(LAAR_LAT,LAAR_LON)
-        print(res)
+        result[api_type.__name__]=res
+    return result   
    
     
 class WeatherBitIO(AbstractWeatherAPI):
@@ -182,5 +182,3 @@ class BuienRadar(AbstractWeatherAPI):
         result.wind_speed=best_station["windspeed"]
         result.description=best_station["weatherdescription"] # sadly in dutch
         return result
-if __name__=="__main__":
-    main()
