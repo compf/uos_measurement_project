@@ -58,7 +58,7 @@ class WeatherBitIO(AbstractWeatherAPI):
         info.humidity = data['rh']
         info.wind_speed = data['wind_spd']
         info.air_pressure = data['pres']
-        #info.rain=0
+        info.rain=data["precip"]
         #info.thunder=0
         #info.time =0
         info.last_updated= data['ts']
@@ -108,7 +108,7 @@ class AccuWeather(AbstractWeatherAPI):
         info.humidity = data[0]['RelativeHumidity']
         info.wind_speed = data[0]['Wind']['Speed']['Metric']['Value']
         info.air_pressure = data[0]['Pressure']['Metric']['Value']
-        #info.rain=0
+        info.rain=data[0]["HasPrecipitation"] #sadly no information about strength of rain
         #info.thunder=0
         #info.time = 
         info.last_updated = data[0]['EpochTime']
@@ -131,8 +131,8 @@ class OpenWeatherMap(AbstractWeatherAPI):
         info.humidity = data['main']['humidity']
         info.wind_speed = data['wind']['speed']
         info.air_pressure = data['main']['pressure']
-        if 'rain' in data:
-            info.rain = data['rain']['1h']
+        if "precipitation" in data:
+            info.rain = data['precipitation']['value']
         #info.thunder=0
         #info.time = 
         info.last_updated = data['dt']
