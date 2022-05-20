@@ -6,18 +6,18 @@ LAAR_LAT=52.5761865151627
 LAAR_LON=6.754423961898484
 class WeatherInformation:
     def __init__(self) -> None:
-        self.temperature:float=0
-        self.humidity:float=0
-        self.wind_speed:float=0
-        self.air_pressure=0
-        self.rain=0
-        self.thunder=0
-        self.time=0
-        self.last_updated=0
-        self.location=0
-        self.sun_set=0
-        self.sun_rise=0
-        self.description=''
+        self.temperature:float=None
+        self.humidity:float=None
+        self.wind_speed:float=None
+        self.air_pressure=None
+        self.rain=None
+        self.thunder=None
+        self.time=None
+        self.last_updated=None
+        self.location=None
+        self.sun_set=None
+        self.sun_rise=None
+        self.description=None
 
     def __str__(self):
         return ("WeatherInformation: \n temperature : " + str(self.temperature) + 
