@@ -4,34 +4,48 @@ import time
 import sys
 import json
 import jsonpickle
-PING_IP="185.72.203.254"
+import argparse
+LAAR_PING_IP="185.72.203.254"
 class PingResult:
     def __init__(self, avg_rtt:float,max_rtt:float,min_rtt:float,loss:float) -> None:
         self.avg_rtt=avg_rtt
         self.max_rtt=max_rtt
         self.min_rtt=min_rtt
         self.loss=loss
-def main():
-    start_time=int(sys.argv[1])
+def main(args):
+    start_time=args.time
+
+    with open(args.conf) as f:
+        conf_obj=json.load(f)
     print(start_time)
     json_obj={}
     json_obj["time"]=start_time
-    json_obj["ip"]=PING_IP
-    apis=[WeatherBitIO,WeatherAPI,AccuWeather,OpenWeatherMap,BuienRadar]
-    weather=get_combined_weather_data(apis)
+    json_obj["ip"]=conf_obj["ping_ip"]
+
+    apis=conf_obj["apis"]
+    weather=get_combined_weather_data(apis,conf_obj["lat"],conf_obj["lon"])
     
-    ping_parser = pingparsing.PingParsing()
-    transmitter = pingparsing.PingTransmitter()
-    transmitter.destination = PING_IP
-    transmitter.count = 10
-    result = transmitter.ping()
-    result=ping_parser.parse(result).as_dict()
+    
+    result=ping(conf_obj)
     ping_res=PingResult(result['rtt_avg'],result['rtt_max'],result['rtt_min'],result['packet_loss_rate'])
     
     json_obj["ping_result"]=ping_res
     json_obj["weather"]=weather
     with open("project_archive/"+str(start_time)+".json","w") as f:
         f.write( jsonpickle.encode(json_obj, unpicklable=False))
+def ping(conf_obj):
+    ping_parser = pingparsing.PingParsing()
+    transmitter = pingparsing.PingTransmitter()
+    transmitter.destination = conf_obj["ping_ip"]
+    transmitter.count = conf_obj["ping_count"]
+    result = transmitter.ping()
+    return ping_parser.parse(result).as_dict()
+
 
 if __name__=="__main__":
-    main()
+    parser=argparse.ArgumentParser()
+    parser.add_argument("--time",type=int,help="The time when the script was started")
+    parser.add_argument("--conf",type=str,help="Path to a config file")
+    args=parser.parse_args()
+    
+    main(args)

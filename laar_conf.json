@@ -1,0 +1,17 @@
+{
+    "lat":52.5761865151627,
+    "lon":6.754423961898484,
+    "interval":5,
+    "archive_dir":"project_archive",
+    "ping_ip":"185.72.203.254",
+    "root_dir":"/home/pi/project",
+    "ping_count":10,
+    "apis":[
+        "buienradar",
+        "openweatherMap",
+        "accuWeather",
+        "weatherAPI",
+        "weatherBit"
+    ]
+
+}
