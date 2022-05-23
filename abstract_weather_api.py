@@ -2,8 +2,7 @@ import http.client
 #from weatherbit.api import Api
 import requests
 from datetime import datetime
-LAAR_LAT=52.5761865151627
-LAAR_LON=6.754423961898484
+
 class WeatherInformation:
     def __init__(self) -> None:
         self.temperature:float=0
@@ -37,12 +36,13 @@ class WeatherInformation:
 class AbstractWeatherAPI:
     def load_data(lat:float,lon:float)-> WeatherInformation:
         pass
-def get_combined_weather_data(apis):
+def get_combined_weather_data(apis,lat:float,lon:float):
     result={}
-    for api_type in apis:
+    for api_key in apis:
+        api_type=apis_dict[api_key]
         api=api_type()
         try:
-            res=api.load_data(LAAR_LAT,LAAR_LON)
+            res=api.load_data(lat,lon)
             result[api_type.__name__]=res
         except Exception as e:
             print("ignoring exception",e)
@@ -187,3 +187,12 @@ class BuienRadar(AbstractWeatherAPI):
         result.wind_speed=best_station["windspeed"]
         result.description=best_station["weatherdescription"] # sadly in dutch
         return result
+apis_dict={
+    "buienradar":BuienRadar,
+    "openweatherMap":OpenWeatherMap,
+    "accuWeather":AccuWeather,
+    "weatherAPI":WeatherAPI,
+    "weatherBit":WeatherBitIO
+
+
+}
