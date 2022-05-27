@@ -311,7 +311,7 @@ class Foreca(AbstractWeatherAPI):
             info.wind_speed  = w['windSpeed']
             info.thunder  = w['thunderProb']
             info.humidity  = w['relHumidity']
-            info.time=datetime.fromisoformat(w["time"]).timestamp()
+            info.time=int(datetime.fromisoformat(w["time"]).timestamp())
             info.air_pressure  = w['pressure']
             info.description  = w['symbol'] #https://developer.foreca.com/resources
             self.save_forecast(info,apis_dict_reversed[Foreca])

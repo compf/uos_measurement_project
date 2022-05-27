@@ -14,7 +14,7 @@ class PingResult:
         self.loss=loss
 def main(args):
     start_time=args.time
-
+    AbstractWeatherAPI.START_TIME=start_time
     with open(args.conf) as f:
         conf_obj=json.load(f)
     print(start_time)
