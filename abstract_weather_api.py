@@ -197,9 +197,8 @@ class Meteomatics(AbstractWeatherAPI):
         current_date = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
 
         url = f'https://api.meteomatics.com/{current_date}/t_2m:C,precip_1h:mm,wind_speed_10m:ms,sunrise:sql,sunset:sql,weather_symbol_1h:idx/{lat},{lon}/json'
-        response = requests.get(url, verify=False, auth=HTTPBasicAuth(api_user, api_password))
+        response = requests.get(url, verify=True, auth=HTTPBasicAuth(api_user, api_password))
         data = response.json()
-        
         info = WeatherInformation()
         info.temperature = data['data'][0]['coordinates'][0]['dates'][0]['value']
         info.rain        = data['data'][1]['coordinates'][0]['dates'][0]['value']
@@ -244,7 +243,7 @@ class Foreca(AbstractWeatherAPI):
 
         info = WeatherInformation()
         info.temperature = data['current']['temperature']
-        info.rain        = data['current']['precipProb']
+        info.rain        = data['current']['precipRate']
         info.wind_speed  = data['current']['windSpeed']
         info.thunder  = data['current']['thunderProb']
         info.humidity  = data['current']['relHumidity']
