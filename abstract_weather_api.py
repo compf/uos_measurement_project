@@ -109,10 +109,9 @@ class WeatherAPI(AbstractWeatherAPI):
         return info
     def forecast(self,data):
         curr_time=time.time()-6*60*60
-        print("test")
+       
         hour=data["forecast"]["forecastday"][0]["hour"]
         hour=min([h for h in hour if h['time_epoch']> curr_time ],key=lambda x:x["time_epoch"])
-        print(hour)
         info=WeatherInformation()
         info.temperature = hour['temp_c']
         info.humidity = data['current']['humidity']
