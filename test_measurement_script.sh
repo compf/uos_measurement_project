@@ -1,5 +1,5 @@
 #!env/bash
-git fetch && git pull
+#git fetch && git pull
 ts=$(date +%s)
 ts=$(($ts-$(($ts%60)))) # resetting to removing effect of possible additional seconds
 #cd /home/pi/project

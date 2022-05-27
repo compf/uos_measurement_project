@@ -2,8 +2,9 @@ import http.client
 #from weatherbit.api import Api
 import requests
 from requests.auth import HTTPBasicAuth
-from datetime import datetime
-
+from datetime import datetime,timedelta
+import os,time
+import json
 class WeatherInformation:
     def __init__(self) -> None:
         self.temperature:float=None
@@ -37,6 +38,21 @@ class WeatherInformation:
 class AbstractWeatherAPI:
     def load_data(lat:float,lon:float)-> WeatherInformation:
         pass
+    def save_forecast(self,info:WeatherInformation,api_key_dict:str):
+        out_path=f"project_archive/forecast/{info.time}.json"
+        if os.path.exists(out_path):
+            with open(out_path,"r") as f:
+                json_obj=json.load(f)
+            json_obj[api_key_dict]=info.__dict__
+            with open(out_path,"w") as f:
+                json.dump(json_obj,f)
+        else:
+            json_obj={}
+            json_obj[api_key_dict]=info.__dict__
+            with open(out_path,"w") as f:
+                json.dump(json_obj,f)
+
+
 def get_combined_weather_data(apis,lat:float,lon:float):
     result={}
     for api_key in apis:
@@ -44,7 +60,7 @@ def get_combined_weather_data(apis,lat:float,lon:float):
         api=api_type()
         try:
             res=api.load_data(lat,lon)
-            result[api_type.__name__]=res
+            result[api_type.__name__]=res.__dict__
         except Exception as e:
             print("ignoring exception",e)
     return result   
@@ -75,7 +91,7 @@ class WeatherBitIO(AbstractWeatherAPI):
 class WeatherAPI(AbstractWeatherAPI):
     def load_data(self,lat:float, lon:float):
         apikey = '690ba17ef992471e988115539221305'
-        url = f'http://api.weatherapi.com/v1/current.json?key={apikey}&q={lat},{lon}'
+        url = f'http://api.weatherapi.com/v1/forecast.json?key={apikey}&q={lat},{lon}'
         response = requests.get(url)
         data = response.json()
 
@@ -84,17 +100,30 @@ class WeatherAPI(AbstractWeatherAPI):
         info.humidity = data['current']['humidity']
         info.wind_speed = data['current']['wind_kph']
         info.air_pressure = data['current']['pressure_mb']
-        #info.rain=0
-        #info.thunder=0
-        #info.time = 
+        info.rain= data['current']['precip_mm']
         info.last_updated = data['current']['last_updated_epoch']
-        #info.location = 
-        #info.sun_set = 
-        #info.sun_rise =
+       
         info.description = data['current']['condition']['text']
 
-        
+        self.forecast(data)
         return info
+    def forecast(self,data):
+        curr_time=time.time()-6*60*60
+        print("test")
+        hour=data["forecast"]["forecastday"][0]["hour"]
+        hour=min([h for h in hour if h['time_epoch']> curr_time ],key=lambda x:x["time_epoch"])
+        print(hour)
+        info=WeatherInformation()
+        info.temperature = hour['temp_c']
+        info.humidity = data['current']['humidity']
+        info.wind_speed = hour['wind_kph']
+        info.air_pressure = hour['pressure_mb']
+        info.rain= hour['precip_mm']
+        info.time = hour['time_epoch']
+
+        info.description = hour['condition']['text']
+        self.save_forecast(info,apis_dict_reversed[WeatherAPI])
+
 class AccuWeather(AbstractWeatherAPI):
     def load_data(self,lat:float,lon:float):
         apikey = 'Uh8LxD0mRtzAjgK7A0BQl6AIz4Dnl9HG'
@@ -139,15 +168,36 @@ class OpenWeatherMap(AbstractWeatherAPI):
         info.air_pressure = data['main']['pressure']
         if "precipitation" in data:
             info.rain = data['precipitation']['value']
-        #info.thunder=0
-        #info.time = 
+        else:
+            info.rain=0
+
         info.last_updated = data['dt']
-        #info.location = 
         info.sun_set = data['sys']['sunset']
         info.sun_rise = data['sys']['sunrise']
         info.description = data['weather'][0]['description']
-
+        self.forecast(apikey,lat,lon)
         return info
+    def forecast(self,apikey:str,lat:float,lon:float):
+        url = f'https://api.openweathermap.org/data/2.5/forecast?lat={lat}&lon={lon}&appid={apikey}&units=metric'
+        response = requests.get(url)
+        curr_time=time.time()
+        data = response.json()
+        info=WeatherInformation()
+        data=min([h for h in data["list"] if h['dt']> curr_time ],key=lambda x:x["dt"])
+        info.temperature = data['main']['temp']
+        info.time=data["dt"]
+        info.humidity = data['main']['humidity']
+        info.wind_speed = data['wind']['speed']
+        info.air_pressure = data['main']['pressure']
+        if "precipitation" in data:
+            info.rain = data['precipitation']['value']
+        else:
+            info.rain=0
+        info.description = data['weather'][0]['description']
+        self.save_forecast(info,apis_dict_reversed[OpenWeatherMap])
+
+
+
 
    
     
@@ -161,11 +211,25 @@ class BuienRadar(AbstractWeatherAPI):
         return dx*dx+dy*dy
     def load_rain_data(self,lat:float,lon:float):
         request_result=requests.request("GET",url=f"https://gpsgadget.buienradar.nl/data/raintext?lat={lat}&lon={lon}")
-        precipitation=request_result.content.decode().split("\n")[0].split("|")[0]
+        lines=request_result.content.decode().split("\n")
+        precipitation=lines[0].split("|")[0]
         precipitation=int(precipitation)
-        if precipitation==0:
+        
+        dt=AbstractWeatherAPI.START_TIME
+        for line in lines[1:-1]:
+            dt+=60*5
+            info=WeatherInformation()
+            rain=float(line.split("|")[0])
+            info.rain=self.convert_precipation(rain)
+            info.time=dt
+        
+            self.save_forecast(info,apis_dict_reversed[BuienRadar])
+       
+        return self.convert_precipation(precipitation)
+    def convert_precipation(self,val:float):
+        if val==0:
             return 0
-        return 10**((precipitation-109)/32)
+        return 10**((val-109)/32)
     def load_data(self,lat: float, lon: float) -> WeatherInformation:
         CLOSEST_STATION=6279 # maybe lookign for closer one, if tehre is one
         data=requests.request("GET",url="https://data.buienradar.nl/2.0/feed/json")
@@ -182,7 +246,7 @@ class BuienRadar(AbstractWeatherAPI):
         result.rain=self.load_rain_data(lat,lon)
         result.sun_rise=json_obj["actual"]["sunrise"]
         result.sun_set=json_obj["actual"]["sunset"]
-        result.time=datetime.fromisoformat(best_station["timestamp"])
+        result.time=datetime.fromisoformat(best_station["timestamp"]).timestamp()
         result.last_updated=result.time
         result.thunder=None # maybe extactable from description
         result.wind_speed=best_station["windspeed"]
@@ -229,6 +293,30 @@ class Aeris(AbstractWeatherAPI):
         info.description  = data['response'][0]['periods'][0]['weatherPrimary']        
         return info
 class Foreca(AbstractWeatherAPI):
+    def forecast(self):
+         # Only for Laar !!!!!! lat and lon have no effects
+        # Valid until 2022-06-26
+        token_url = 'https://pfa.foreca.com/authorize/token'
+        log_vars = {'user': 'mymob-12345', 'password': 'NoeHKNYSwaZI'}
+        access_token = requests.post(token_url, data=log_vars).json()['access_token']
+        authorization_header = {'Authorization': 'Bearer '+access_token}
+        current_url = 'https://pfa.foreca.com/api/v1/forecast/15minutely/102882115?dataset=full' # 102882115 = Laar's Location ID
+        #url2 = 'https://pfa.foreca.com/api/v1/location/search/Laar' # search for location id by name
+        response = requests.post(current_url, headers=authorization_header)
+        data = response.json()
+        for w in data["forecast"]:
+            info = WeatherInformation()
+            info.temperature = w['temperature']
+            info.rain        = w['precipRate']
+            info.wind_speed  = w['windSpeed']
+            info.thunder  = w['thunderProb']
+            info.humidity  = w['relHumidity']
+            info.time=datetime.fromisoformat(w["time"]).timestamp()
+            info.air_pressure  = w['pressure']
+            info.description  = w['symbol'] #https://developer.foreca.com/resources
+            self.save_forecast(info,apis_dict_reversed[Foreca])
+
+
     def load_data(self,lat:float,lon:float):
         # Only for Laar !!!!!! lat and lon have no effects
         # Valid until 2022-06-26
@@ -250,7 +338,7 @@ class Foreca(AbstractWeatherAPI):
         info.last_updated  = data['current']['time']
         info.air_pressure  = data['current']['pressure']
         info.description  = data['current']['symbol'] #https://developer.foreca.com/resources
-        
+        self.forecast()
         return info
 
 
@@ -264,4 +352,5 @@ apis_dict={
     "aeris":Aeris,
     "foreca":Foreca
 }
+apis_dict_reversed=dict([(v,k) for k,v in apis_dict.items()])
     
