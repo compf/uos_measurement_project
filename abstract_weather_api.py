@@ -61,8 +61,8 @@ def get_combined_weather_data(apis,lat:float,lon:float,conf):
         api_type=apis_dict[api_key]
         api=api_type()
         try:
-            res=api.load_data(lat,lon,conf)
-            result[api_type.__name__]=res.__dict__
+            res=api.load_data(lat,lon,conf).__dict__
+            result[api_type.__name__]=res
         except Exception as e:
             print("ignoring exception",e)
     return result 

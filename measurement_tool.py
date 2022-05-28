@@ -28,8 +28,8 @@ def main(args):
     
     result=ping(conf_obj)
     ping_res=PingResult(result['rtt_avg'],result['rtt_max'],result['rtt_min'],result['packet_loss_rate'])
-    
-    json_obj["ping_result"]=ping_res
+    get_forecast(json_obj,start_time)
+    json_obj["ping_result"]=ping_res.__dict__
     json_obj["weather"]=weather
     with open("project_archive/"+str(start_time)+".json","w") as f:
         f.write( jsonpickle.encode(json_obj, unpicklable=False))
@@ -41,7 +41,12 @@ def ping(conf_obj):
     result = transmitter.ping()
     return ping_parser.parse(result).as_dict()
 
-
+def get_forecast(json_obj,start_time):
+    json_path=f"project_archive/forecast/{start_time}.json"
+    if os.path.exists(json_path):
+        with open(json_path,"r") as f:
+            json_obj["forecast"]=json.load(f)
+        os.unlink(json_path)
 if __name__=="__main__":
     parser=argparse.ArgumentParser()
     parser.add_argument("--time",type=int,help="The time when the script was started")
