@@ -23,7 +23,7 @@ def main(args):
     json_obj["ip"]=conf_obj["ping_ip"]
 
     apis=conf_obj["apis"]
-    weather=get_combined_weather_data(apis,conf_obj["lat"],conf_obj["lon"])
+    weather=get_combined_weather_data(apis,conf_obj["lat"],conf_obj["lon"],conf_obj)
     
     
     result=ping(conf_obj)

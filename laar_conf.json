@@ -15,6 +15,16 @@
         "meteomatics",
         "aeris",
         "foreca"
-    ]
+    ],
+    "apis_data":{
+        "openweatherMap":"27a0231c6a206d1fffeba8a2d00e968f",
+        "accuWeather":"Uh8LxD0mRtzAjgK7A0BQl6AIz4Dnl9HG",
+        "weatherAPI":"690ba17ef992471e988115539221305",
+        "weatherBit":"7d655bb508cd4716b40f67d2cc87878f",
+        "meteomatics": {"api_user":"vera_dast","api_password":"5RF3ecV1f3"}, 
+        "aeris": {"client_id" : "fNhvFwdyUKxsfowQsQ6rD",
+        "client_secret" : "MFmQhE0EugSaG8R41jYo4jhUDgbhU7MOG5bhrAE4"},
+        "foreca": {"user": "mymob-12345", "password": "NoeHKNYSwaZI","location_id":102882115}
+    }
 
 }

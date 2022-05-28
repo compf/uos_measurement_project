@@ -36,6 +36,8 @@ class WeatherInformation:
         )
 
 class AbstractWeatherAPI:
+    def get_apis_data(self,conf,typ):
+        return conf["apis_data"][apis_dict_reversed[typ]]  
     def load_data(lat:float,lon:float)-> WeatherInformation:
         pass
     def save_forecast(self,info:WeatherInformation,api_key_dict:str):
@@ -53,22 +55,23 @@ class AbstractWeatherAPI:
                 json.dump(json_obj,f)
 
 
-def get_combined_weather_data(apis,lat:float,lon:float):
+def get_combined_weather_data(apis,lat:float,lon:float,conf):
     result={}
     for api_key in apis:
         api_type=apis_dict[api_key]
         api=api_type()
         try:
-            res=api.load_data(lat,lon)
+            res=api.load_data(lat,lon,conf)
             result[api_type.__name__]=res.__dict__
         except Exception as e:
             print("ignoring exception",e)
-    return result   
+    return result 
+
    
     
 class WeatherBitIO(AbstractWeatherAPI):
-    def load_data(self,lat:float,lon:float)-> WeatherInformation:
-        apikey = '7d655bb508cd4716b40f67d2cc87878f'
+    def load_data(self,lat:float,lon:float,conf)-> WeatherInformation:
+        apikey = self.get_apis_data(conf,WeatherBitIO)
         url = f"https://api.weatherbit.io/v2.0/current?&lat={lat}&lon={lon}&key={apikey}&include=minutely"
         response = requests.get(url)
         data = response.json()['data'][0]
@@ -89,8 +92,8 @@ class WeatherBitIO(AbstractWeatherAPI):
 
         return(info)
 class WeatherAPI(AbstractWeatherAPI):
-    def load_data(self,lat:float, lon:float):
-        apikey = '690ba17ef992471e988115539221305'
+    def load_data(self,lat:float, lon:float,conf):
+        apikey = self.get_apis_data(conf,WeatherAPI)
         url = f'http://api.weatherapi.com/v1/forecast.json?key={apikey}&q={lat},{lon}'
         response = requests.get(url)
         data = response.json()
@@ -124,8 +127,8 @@ class WeatherAPI(AbstractWeatherAPI):
         self.save_forecast(info,apis_dict_reversed[WeatherAPI])
 
 class AccuWeather(AbstractWeatherAPI):
-    def load_data(self,lat:float,lon:float):
-        apikey = 'Uh8LxD0mRtzAjgK7A0BQl6AIz4Dnl9HG'
+    def load_data(self,lat:float,lon:float,conf):
+        apikey = self.get_apis_data(conf,AccuWeather)
         url = f'http://dataservice.accuweather.com/locations/v1/cities/geoposition/search?apikey={apikey}&q={lat},{lon}'
         response = requests.get(url)
         data = response.json()
@@ -153,9 +156,9 @@ class AccuWeather(AbstractWeatherAPI):
 
         return info
 class OpenWeatherMap(AbstractWeatherAPI):
-    def load_data(self,lat:float,lon:float):
+    def load_data(self,lat:float,lon:float,conf):
 
-        apikey = '27a0231c6a206d1fffeba8a2d00e968f'
+        apikey = self.get_apis_data(conf,OpenWeatherMap)
         url = f'https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={apikey}&units=metric'
         response = requests.get(url)
         data = response.json()
@@ -229,7 +232,7 @@ class BuienRadar(AbstractWeatherAPI):
         if val==0:
             return 0
         return 10**((val-109)/32)
-    def load_data(self,lat: float, lon: float) -> WeatherInformation:
+    def load_data(self,lat: float, lon: float,conf) -> WeatherInformation:
         CLOSEST_STATION=6279 # maybe lookign for closer one, if tehre is one
         data=requests.request("GET",url="https://data.buienradar.nl/2.0/feed/json")
         json_obj=data.json()
@@ -253,10 +256,11 @@ class BuienRadar(AbstractWeatherAPI):
         return result
 
 class Meteomatics(AbstractWeatherAPI):
-    def load_data(self,lat:float,lon:float):
+    def load_data(self,lat:float,lon:float,conf):
         # Valid until 2022-06-08
-        api_user = 'vera_dast'
-        api_password = '5RF3ecV1f3'
+        api_data=self.get_apis_data(conf,Meteomatics)
+        api_user = api_data["api_user"]
+        api_password = api_data["api_password"]
         current_date = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
 
         url = f'https://api.meteomatics.com/{current_date}/t_2m:C,precip_1h:mm,wind_speed_10m:ms,sunrise:sql,sunset:sql,weather_symbol_1h:idx/{lat},{lon}/json'
@@ -273,10 +277,11 @@ class Meteomatics(AbstractWeatherAPI):
         return info
 
 class Aeris(AbstractWeatherAPI):
-    def load_data(self,lat:float,lon:float):
+    def load_data(self,lat:float,lon:float,conf):
+        api_data=self.get_apis_data(conf,Aeris)
         # Valid until 2022-06-26
-        client_id = 'fNhvFwdyUKxsfowQsQ6rD'
-        client_secret = 'MFmQhE0EugSaG8R41jYo4jhUDgbhU7MOG5bhrAE4'
+        client_id = api_data["client_id"]
+        client_secret = api_data["client_secret"]
 
         url = f'https://api.aerisapi.com/conditions/{lat},{lon}?client_id={client_id}&client_secret={client_secret}'
         response = requests.get(url)
@@ -292,15 +297,15 @@ class Aeris(AbstractWeatherAPI):
         info.description  = data['response'][0]['periods'][0]['weatherPrimary']        
         return info
 class Foreca(AbstractWeatherAPI):
-    def forecast(self):
-         # Only for Laar !!!!!! lat and lon have no effects
+    def forecast(self,conf):
+        api_data=self.get_apis_data(conf,Foreca)
+        # Only for Laar !!!!!! lat and lon have no effects
         # Valid until 2022-06-26
         token_url = 'https://pfa.foreca.com/authorize/token'
-        log_vars = {'user': 'mymob-12345', 'password': 'NoeHKNYSwaZI'}
+        log_vars = {'user': api_data["user"], 'password': api_data["password"]}
         access_token = requests.post(token_url, data=log_vars).json()['access_token']
         authorization_header = {'Authorization': 'Bearer '+access_token}
-        current_url = 'https://pfa.foreca.com/api/v1/forecast/15minutely/102882115?dataset=full' # 102882115 = Laar's Location ID
-        #url2 = 'https://pfa.foreca.com/api/v1/location/search/Laar' # search for location id by name
+        current_url = f'https://pfa.foreca.com/api/v1/forecast/15minutely/{api_data["location_id"]}?dataset=full'
         response = requests.post(current_url, headers=authorization_header)
         data = response.json()
         for w in data["forecast"]:
@@ -316,14 +321,15 @@ class Foreca(AbstractWeatherAPI):
             self.save_forecast(info,apis_dict_reversed[Foreca])
 
 
-    def load_data(self,lat:float,lon:float):
+    def load_data(self,lat:float,lon:float,conf):
+        api_data=self.get_apis_data(conf,Foreca)
         # Only for Laar !!!!!! lat and lon have no effects
         # Valid until 2022-06-26
         token_url = 'https://pfa.foreca.com/authorize/token'
-        log_vars = {'user': 'mymob-12345', 'password': 'NoeHKNYSwaZI'}
+        log_vars = {'user': api_data["user"], 'password': api_data["password"]}
         access_token = requests.post(token_url, data=log_vars).json()['access_token']
         authorization_header = {'Authorization': 'Bearer '+access_token}
-        current_url = 'https://pfa.foreca.com/api/v1/current/102882115' # 102882115 = Laar's Location ID
+        current_url = f'https://pfa.foreca.com/api/v1/current/{api_data["location_id"]}'
         #url2 = 'https://pfa.foreca.com/api/v1/location/search/Laar' # search for location id by name
         response = requests.post(current_url, headers=authorization_header)
         data = response.json()
@@ -337,7 +343,7 @@ class Foreca(AbstractWeatherAPI):
         info.last_updated  = data['current']['time']
         info.air_pressure  = data['current']['pressure']
         info.description  = data['current']['symbol'] #https://developer.foreca.com/resources
-        self.forecast()
+        self.forecast(conf)
         return info
 
 
