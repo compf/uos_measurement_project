@@ -106,7 +106,31 @@ class TimePingDataLoader(AbstractDataLoader):
                 y_data[0].append(json_obj["ping_result"][kind])
             result.append(WeatherGraph(x_data,y_data,inf))
         return result
-                
+class TimeThroughputDataLoader(AbstractDataLoader):
+    def load(self) -> List[WeatherGraph]:
+        x_data=[]
+        y_data=[]
+        path=f"graphs/time_throughput.svg"
+        inf=WeatherGraphInformation("Time => Throughput","Time [s]",["Throughput [bit/s]"],path,"")
+        for json_obj in self.raw_data:
+            if "iperf_result" in json_obj:
+                x_data.append(json_obj["time"])
+            
+                y_data.append(json_obj["iperf_result"]["bits_per_sec"])
+        return [WeatherGraph(x_data,[y_data],inf)]
+class TimeRetransmissionDataLoader(AbstractDataLoader):
+    def load(self) -> List[WeatherGraph]:
+        x_data=[]
+        y_data=[]
+        path=f"graphs/time_retransmission.svg"
+        inf=WeatherGraphInformation("Time => Retransmission","Time [s]",["Retransmissions"],path,"")
+        for json_obj in self.raw_data:
+            if "iperf_result" in json_obj:
+                x_data.append(json_obj["time"])
+            
+                y_data.append(json_obj["iperf_result"]["retransmissions"])
+        return [WeatherGraph(x_data,[y_data],inf)]
+
 def get_weather_data(json_obj,api_name,weather_kind)->any:
     b= api_name in json_obj["weather"] and   json_obj["weather"][api_name]!=None  and weather_kind in json_obj["weather"][api_name]
     if b:
@@ -136,20 +160,89 @@ class TimePingWeatherLoader(TimePingDataLoader):
                    
                     y_values.append(INVALID)
         return base_result
-class ByWeatherKindDataLoader(AbstractDataLoader):
+class TimeThroughputWeatherLoader(TimeThroughputDataLoader):
     def __init__(self,api_name,weather_kind) -> None:
         super().__init__()
         self.api_name=api_name
         self.weather_kind=weather_kind
+    def load(self) -> List[WeatherGraph]:
+        base_result= super().load()
+        for res in base_result:
+            res.information.y_labels.append(self.weather_kind +" from "+self.api_name)
+            res.y_values.append([])
+            res.information.path=f"graphs/time_throughput/{self.api_name}_{self.weather_kind}"+EXTENSION
+            y_values=res.y_values[1]
+            res.information.kind+=f"_{self.api_name}_{self.weather_kind}"
+            for json_obj in self.raw_data:
+                if"iperf_result" not in  json_obj:
+                    continue
+
+                weather=get_weather_data(json_obj,self.api_name,self.weather_kind)
+                if weather!=None:
+                    y_values.append(weather)
+                else:
+                   
+                    y_values.append(INVALID)
+        return base_result
+class TimeRetransmissionsWeatherLoader(TimeRetransmissionDataLoader):
+    def __init__(self,api_name,weather_kind) -> None:
+        super().__init__()
+        self.api_name=api_name
+        self.weather_kind=weather_kind
+    def load(self) -> List[WeatherGraph]:
+        base_result= super().load()
+        for res in base_result:
+            res.information.y_labels.append(self.weather_kind +" from "+self.api_name)
+            res.y_values.append([])
+            res.information.path=f"graphs/time_retransmissions/{self.api_name}_{self.weather_kind}"+EXTENSION
+            y_values=res.y_values[1]
+            res.information.kind+=f"_{self.api_name}_{self.weather_kind}"
+            for json_obj in self.raw_data:
+                if"iperf_result" not in  json_obj:
+                    continue
+
+                weather=get_weather_data(json_obj,self.api_name,self.weather_kind)
+                if weather!=None:
+                    y_values.append(weather)
+                else:
+                   
+                    y_values.append(INVALID)
+        return base_result
+class ByWeatherKindDataLoader(AbstractDataLoader):
+    def __init__(self,api_name,weather_kind,measurement_result_kinds,timespan) -> None:
+        super().__init__()
+        self.measurement_result_kinds=measurement_result_kinds
+        self.api_name=api_name
+        self.weather_kind=weather_kind
+        self.timespan=timespan
     def process_weather_data(self,weather_data,kind):
         pass
     def get_stat_name(self)->str:
         pass
+    def is_time_ok(self,t,json_obj):
+        if "OpenWeatherMap" not in  json_obj["weather"]:
+            dt=datetime.fromtimestamp(t)
+            hour,minute=json_obj["weather"]["WeatherBitIO"]["sun_set"].split(":")
+            dt=datetime(dt.year,dt.month,dt.day,int(hour),int(minute),dt.second)
+          
+            sun_set=dt.timestamp()
+            hour,minute=json_obj["weather"]["WeatherBitIO"]["sun_rise"].split(":")
+            dt=datetime(dt.year,dt.month,dt.day,int(hour),int(minute),dt.second)
+
+            sun_rise=dt.timestamp()
+        else:
+            sun_set=json_obj["weather"]["OpenWeatherMap"]["sun_set"]
+            sun_rise=json_obj["weather"]["OpenWeatherMap"]["sun_rise"]
+        if self.timespan==Timespan.DAY:
+            return t>= sun_rise and t<=sun_set
+        elif self.timespan== Timespan.NIGHT:
+            return t<sun_rise or t>sun_set
+        else: 
+            return True
     def load(self) -> List[WeatherGraph]:
-        ping_result_kinds = ["min_rtt", "avg_rtt", "max_rtt"]
         result=[]
        
-        for kind in ping_result_kinds:
+        for kind in self.measurement_result_kinds:
             weather_data=dict()
             for json_obj in self.raw_data:
                
@@ -171,26 +264,102 @@ class ByWeatherKindDataLoader(AbstractDataLoader):
 
 
         return result
+class Timespan:
+    ALL=0
+    DAY=1
+    NIGHT=2
 class   ByWeatherKindPingDataLoader(ByWeatherKindDataLoader):
     def get_stat_name(self) -> str:
-        return "ping"
+        if self.timespan==Timespan.ALL:
+            return "ping"
+        elif self.timespan==Timespan.DAY:
+            return "ping_day"
+        else:
+            return "ping_night"
     def load(self) -> List[WeatherGraph]:
         return super().load()
     def process_weather_data(self,weather_data,kind):
+        remove=[]
         for w in weather_data:
-            
-            for i in range(len(weather_data[w])):
-                json_obj=time_jsonObj[weather_data[w][i]]
-                ping=json_obj["ping_result"][kind]
-                weather_data[w][i]=ping
+            res=[]
+            for t in weather_data[w]:
+                json_obj=time_jsonObj[t]
+                if self.is_time_ok(t,json_obj):
+                    ping=json_obj["ping_result"][kind]
+                    res.append(ping)
+            weather_data[w]=res
+            if len(res)==0:
+                remove.append(w)
+        for r in remove:
+            weather_data.pop(r,None)
+class ByWeatherKindThroughput(ByWeatherKindDataLoader):
+    def get_stat_name(self) -> str:
+        if self.timespan==Timespan.ALL:
+            return "Throughput"
+        elif self.timespan==Timespan.DAY:
+            return "Throughput_day"
+        else:
+            return "Throughput_night"
+    def process_weather_data(self, weather_data, kind):
+        remove=[]
+        for w in weather_data:
+            res=[]
+            for t in weather_data[w]:
+                json_obj=time_jsonObj[t]
+                if self.is_time_ok(t,json_obj) and "iperf_result" in json_obj :
+                    ping=json_obj["iperf_result"]["bits_per_sec"]
+                    res.append(ping)
+            weather_data[w]=res
+            if len(res)==0:
+                remove.append(w)
+        for r in remove:
+            weather_data.pop(r,None)
+class ByWeatherKindRetransmission(ByWeatherKindDataLoader):
+    def get_stat_name(self) -> str:
+        if self.timespan==Timespan.ALL:
+            return "Retransmission"
+        elif self.timespan==Timespan.DAY:
+            return "Retransmission_day"
+        else:
+            return "Retransmission_night"
+    def process_weather_data(self, weather_data, kind):
+        remove=[]
+        for w in weather_data:
+            res=[]
+            for t in weather_data[w]:
+                json_obj=time_jsonObj[t]
+                if self.is_time_ok(t,json_obj) and "iperf_result" in json_obj :
+                    ping=json_obj["iperf_result"]["retransmissions"]
+                    res.append(ping)
+            weather_data[w]=res
+            if len(res)==0:
+                remove.append(w)
+        for r in remove:
+            weather_data.pop(r,None)
 
 api_weather_product= list(itertools.product(apis_names,weather_kinds))
+ping_result_kinds=["min_rtt", "avg_rtt", "max_rtt"]
 loaders=[
-    TimePingDataLoader()
+    TimePingDataLoader(),
+    TimeThroughputDataLoader(),
+    TimeRetransmissionDataLoader()
 ]
-loaders.extend([TimePingWeatherLoader(x[0],x[1]) for x in api_weather_product])
-loaders.extend([ByWeatherKindPingDataLoader(x[0],x[1]) for x in api_weather_product])
 
+loaders.extend([TimePingWeatherLoader(x[0],x[1]) for x in api_weather_product])
+loaders.extend([TimeThroughputWeatherLoader(x[0],x[1]) for x in api_weather_product])
+loaders.extend([TimeRetransmissionsWeatherLoader(x[0],x[1]) for x in api_weather_product])
+
+loaders.extend([ByWeatherKindPingDataLoader(x[0],x[1],ping_result_kinds,Timespan.ALL) for x in api_weather_product])
+loaders.extend([ByWeatherKindPingDataLoader(x[0],x[1],ping_result_kinds,Timespan.DAY) for x in api_weather_product])
+loaders.extend([ByWeatherKindPingDataLoader(x[0],x[1],ping_result_kinds,Timespan.NIGHT) for x in api_weather_product])
+
+loaders.extend([ByWeatherKindThroughput(x[0],x[1],["all"],Timespan.ALL) for x in api_weather_product])
+loaders.extend([ByWeatherKindThroughput(x[0],x[1],["all"],Timespan.DAY) for x in api_weather_product])
+loaders.extend([ByWeatherKindThroughput(x[0],x[1],["all"],Timespan.NIGHT) for x in api_weather_product])
+
+loaders.extend([ByWeatherKindRetransmission(x[0],x[1],["all"],Timespan.ALL) for x in api_weather_product])
+loaders.extend([ByWeatherKindRetransmission(x[0],x[1],["all"],Timespan.DAY) for x in api_weather_product])
+loaders.extend([ByWeatherKindRetransmission(x[0],x[1],["all"],Timespan.NIGHT) for x in api_weather_product])
 
 
 def main():
