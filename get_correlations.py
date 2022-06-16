@@ -27,12 +27,13 @@ class APIWeatherInfo:
         self.ping_results = {
             'avg_rtt': [],
             'max_rtt': [],
-            'min_rtt': []
+            'min_rtt': [],
+            'loss': []
         }
         self.weather = {}
         for kind in weather_kinds:
             self.weather[kind] = []
-        self.correlations = {'avg_rtt': {}, 'max_rtt': {}, 'min_rtt': {}}
+        self.correlations = {'avg_rtt': {}, 'max_rtt': {}, 'min_rtt': {}, 'loss': {}}
 
     def get_correlations(self):
         for kind in self.weather:
@@ -51,16 +52,17 @@ class APIWeatherInfo:
     def plot(self):
         width = 0.2
         x = np.arange(6)
-        plt.bar(x-0.2, list(self.correlations['avg_rtt'].values()), width, color='r', edgecolor='black', label='Avg. RTT')
-        plt.bar(x,     list(self.correlations['max_rtt'].values()), width, color='g', edgecolor='black', label='Max. RTT')
-        plt.bar(x+0.2, list(self.correlations['min_rtt'].values()), width, color='b', edgecolor='black', label='Min. RTT')
+        plt.bar(x-0.3, list(self.correlations['avg_rtt'].values()), width, color='r', edgecolor='black', label='Avg. RTT')
+        plt.bar(x-0.1, list(self.correlations['max_rtt'].values()), width, color='g', edgecolor='black', label='Max. RTT')
+        plt.bar(x+0.1, list(self.correlations['min_rtt'].values()), width, color='b', edgecolor='black', label='Min. RTT')
+        plt.bar(x+0.3, list(self.correlations['loss'].values()),    width, color='y', edgecolor='black', label='Loss')
 
         plt.xticks(x, [kind for kind in self.weather])
         plt.ylabel('Correlation')
         plt.title(f'Correlation of API \'{self.api_name}\' with weather in Laar', fontsize=14)
         plt.legend(loc='upper right')
         plt.grid()
-        plt.ylim(-1, 1)
+        plt.ylim(-0.5, 0.5)
         plt.tight_layout()
         plt.savefig(f'./correlationgraphs/correlations_{self.api_name}.pdf')
         plt.clf()
@@ -90,6 +92,7 @@ def main():
                     apiWeatherInfo.ping_results['avg_rtt'].append(d['ping_result']['avg_rtt'])
                     apiWeatherInfo.ping_results['max_rtt'].append(d['ping_result']['max_rtt'])
                     apiWeatherInfo.ping_results['min_rtt'].append(d['ping_result']['min_rtt'])
+                    apiWeatherInfo.ping_results['loss'].append(d['ping_result']['loss'])
                     for kind in weather_kinds:
                         apiWeatherInfo.weather[kind].append(d['weather'][api][kind])
             
