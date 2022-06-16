@@ -57,7 +57,7 @@ class APIWeatherInfo:
 
         plt.xticks(x, [kind for kind in self.weather])
         plt.ylabel('Correlation')
-        plt.title(f'Correlation of API \'{self.api_name}\' with weather in Laar', fontsize=16)
+        plt.title(f'Correlation of API \'{self.api_name}\' with weather in Laar', fontsize=14)
         plt.legend(loc='upper right')
         plt.grid()
         plt.ylim(-1, 1)
