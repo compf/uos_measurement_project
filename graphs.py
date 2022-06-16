@@ -220,13 +220,20 @@ class ByWeatherKindDataLoader(AbstractDataLoader):
     def get_stat_name(self)->str:
         pass
     def is_time_ok(self,t,json_obj):
-        if "OpenWeatherMap" not in  json_obj["weather"]:
+        if True or "OpenWeatherMap" not in  json_obj["weather"]:
             dt=datetime.fromtimestamp(t)
-            hour,minute=json_obj["weather"]["WeatherBitIO"]["sun_set"].split(":")
+            
+            hour=5
+            minute=30
+            #hour,minute=json_obj["weather"]["WeatherBitIO"]["sun_set"].split(":")
             dt=datetime(dt.year,dt.month,dt.day,int(hour),int(minute),dt.second)
           
             sun_set=dt.timestamp()
-            hour,minute=json_obj["weather"]["WeatherBitIO"]["sun_rise"].split(":")
+            #hour,minute=json_obj["weather"]["WeatherBitIO"]["sun_rise"].split(":")
+            # defining sunset only when it is clearly dark because 19:00 it is still too light
+            # still need to find better time
+            hour=23
+            minute=59
             dt=datetime(dt.year,dt.month,dt.day,int(hour),int(minute),dt.second)
 
             sun_rise=dt.timestamp()
