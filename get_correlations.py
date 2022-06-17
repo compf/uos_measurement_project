@@ -24,23 +24,29 @@ class APIWeatherInfo:
     def __init__(self, name):
         self.api_name = name
         self.times = []
-        self.ping_results = {
+        self.measurement_results = {
             'avg_rtt': [],
             'max_rtt': [],
-            'min_rtt': []
+            'min_rtt': [],
+            "iperf_throughput":[],
+            "iperf_retransmission":[]
         }
         self.weather = {}
         for kind in weather_kinds:
             self.weather[kind] = []
-        self.correlations = {'avg_rtt': {}, 'max_rtt': {}, 'min_rtt': {}}
+        self.correlations = {'avg_rtt': {}, 'max_rtt': {}, 'min_rtt': {},"iperf_throughput":{},
+            "iperf_retransmission":{}}
 
     def get_correlations(self):
         for kind in self.weather:
             for correlation in self.correlations:
-                x = np.array(self.ping_results[correlation])
+                x = np.array(self.measurement_results[correlation])
                 y = np.array(self.weather[kind])
+                if len(x)<len(y):
+                    y=y[len(y)-len(x):]
                 try:
                     r = np.corrcoef(x, y)[0, 1]
+                    print(r,correlation)
                     if math.isnan(r):
                         self.correlations[correlation][kind] = 0
                     else:
@@ -62,7 +68,20 @@ class APIWeatherInfo:
         plt.grid()
         plt.ylim(-1, 1)
         plt.tight_layout()
-        plt.savefig(f'./correlationgraphs/correlations_{self.api_name}.pdf')
+        plt.savefig(f'./correlationgraphs/correlations_rtt_{self.api_name}.pdf')
+        plt.clf()
+
+        plt.bar(x-0.2, list(self.correlations['iperf_throughput'].values()), width, color='r', edgecolor='black', label='Iperf throughput')
+        plt.bar(x,     list(self.correlations['iperf_retransmission'].values()), width, color='g', edgecolor='black', label='Iperf retransmission')
+
+        plt.xticks(x, [kind for kind in self.weather])
+        plt.ylabel('Correlation')
+        plt.title(f'Correlation of API \'{self.api_name}\' with weather in Laar', fontsize=14)
+        plt.legend(loc='upper right')
+        plt.grid()
+        plt.ylim(-1, 1)
+        plt.tight_layout()
+        plt.savefig(f'./correlationgraphs/correlations_iperf_{self.api_name}.pdf')
         plt.clf()
 
 
@@ -71,6 +90,9 @@ def main():
     data = []
 
     for json_file in json_files:
+        if json_file=="forecast":
+            continue
+
         with open(ARCHIVE_PATH + '/' + json_file) as f:
             data.append(json.load(f))
 
@@ -87,9 +109,12 @@ def main():
             for apiWeatherInfo in apiWeatherInformations:
                 if apiWeatherInfo.api_name == api:
                     apiWeatherInfo.times.append(d['time'])
-                    apiWeatherInfo.ping_results['avg_rtt'].append(d['ping_result']['avg_rtt'])
-                    apiWeatherInfo.ping_results['max_rtt'].append(d['ping_result']['max_rtt'])
-                    apiWeatherInfo.ping_results['min_rtt'].append(d['ping_result']['min_rtt'])
+                    apiWeatherInfo.measurement_results['avg_rtt'].append(d['ping_result']['avg_rtt'])
+                    apiWeatherInfo.measurement_results['max_rtt'].append(d['ping_result']['max_rtt'])
+                    apiWeatherInfo.measurement_results['min_rtt'].append(d['ping_result']['min_rtt'])
+                    if "iperf_result" in d:
+                        apiWeatherInfo.measurement_results['iperf_throughput'].append(d['iperf_result']['bits_per_sec'])
+                        apiWeatherInfo.measurement_results['iperf_retransmission'].append(d['iperf_result']['retransmissions'])
                     for kind in weather_kinds:
                         apiWeatherInfo.weather[kind].append(d['weather'][api][kind])
             
