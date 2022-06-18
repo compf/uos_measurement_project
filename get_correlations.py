@@ -57,16 +57,17 @@ class APIWeatherInfo:
     def plot(self):
         width = 0.2
         x = np.arange(6)
-        plt.bar(x-0.2, list(self.correlations['avg_rtt'].values()), width, color='r', edgecolor='black', label='Avg. RTT')
-        plt.bar(x,     list(self.correlations['max_rtt'].values()), width, color='g', edgecolor='black', label='Max. RTT')
-        plt.bar(x+0.2, list(self.correlations['min_rtt'].values()), width, color='b', edgecolor='black', label='Min. RTT')
+        plt.bar(x-0.3, list(self.correlations['avg_rtt'].values()), width, color='r', edgecolor='black', label='Avg. RTT')
+        plt.bar(x-0.1, list(self.correlations['max_rtt'].values()), width, color='g', edgecolor='black', label='Max. RTT')
+        plt.bar(x+0.1, list(self.correlations['min_rtt'].values()), width, color='b', edgecolor='black', label='Min. RTT')
+        plt.bar(x+0.3, list(self.correlations['loss'].values()),    width, color='y', edgecolor='black', label='Loss')
 
         plt.xticks(x, [kind for kind in self.weather])
         plt.ylabel('Correlation')
         plt.title(f'Correlation of API \'{self.api_name}\' with weather in Laar', fontsize=14)
         plt.legend(loc='upper right')
         plt.grid()
-        plt.ylim(-1, 1)
+        plt.ylim(-0.5, 0.5)
         plt.tight_layout()
         plt.savefig(f'./correlationgraphs/correlations_rtt_{self.api_name}.pdf')
         plt.clf()
