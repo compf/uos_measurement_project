@@ -17,6 +17,7 @@ rdx1=pd.read_csv("ceragon_RxLevel_7d.txt",delimiter=";",names=["Time","RDX","Ign
 rdx2=pd.read_csv("ceragon_RxLevel_7d_2.txt",delimiter=";",names=["Time","RDX","Ignore"])
 print(rdx2)
 rdx=pd.concat([rdx1,rdx2],ignore_index=True,sort=False)
+rdx["RDX"]=-rdx["RDX"]
 flag=False
 start_time=rdx["Time"][0]
 end_time=rdx["Time"][len(rdx["Time"])-1]
@@ -68,10 +69,12 @@ for l in labels:
     print(x)
     values.append(x)
     
-plt.bar(pos,values,width=0.2)
+plt.bar(pos,values,width=0.2,label="RX power")
 plt.title("Correlation RX/weather")
 plt.ylabel("Correlation")
 plt.ylim([-1,1])
+plt.grid()
+plt.legend()
 plt.tight_layout()
 
 #plt.grid()
