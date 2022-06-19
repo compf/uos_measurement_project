@@ -9,8 +9,8 @@ class WeatherInformation:
     def __init__(self) -> None:
         self.temperature:float=None
         self.humidity:float=None
-        self.wind_speed:float=None
         self.air_pressure=None
+        self.wind_speed:float=None
         self.rain=None
         self.thunder=None
         self.time=None
