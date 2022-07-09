@@ -2,6 +2,15 @@ import os, json, sys, math, time,csv
 import matplotlib.pyplot as plt
 import abstract_weather_api
 import numpy as np
+def transform(value,a,w):
+    if (a=="WeatherAPI" or a=="Aeris") and w=="wind_speed":
+        return value/3.6
+    elif value==False:
+        return 0
+    elif value==True:
+        return 1
+    else:
+        return value
 weather_kinds = vars(abstract_weather_api.WeatherInformation()).keys()
 weather_kinds_ignore = {"time", "last_updated", "location", "sun_rise", "description", "sun_set"}
 weather_kinds = [w for w in weather_kinds if w not in weather_kinds_ignore]
@@ -17,7 +26,7 @@ for fname in os.listdir("project_archive"):
             if w not in series:
                 series[w]=[]
            # print(json_obj)
-            line=[json_obj["time"]]+[json_obj["weather"][a][w] if a in json_obj["weather"] and  json_obj["weather"][a]!=None else INVALID for a in weather_api]
+            line=[json_obj["time"]]+[transform(json_obj["weather"][a][w],a,w) if a in json_obj["weather"] and  json_obj["weather"][a]!=None else INVALID for a in weather_api]
             series[w].append(line)
 for w in weather_kinds:
     series[w]=sorted(series[w])

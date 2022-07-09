@@ -1,5 +1,6 @@
 import pandas as pd
 import scipy.stats as stats
+import os
 import abstract_weather_api
 import numpy as np
 import itertools
@@ -24,23 +25,33 @@ def round_down(m, n):
     return m // n * n
 pairs=[a for a in itertools.product(weather_api,weather_api) if a[0]!=a[1]]
 SIGNIFICANCE=0.01
-for w in weather_kinds:
-    df=pd.read_csv("time_series/"+w+".csv",delimiter=";")
+DIFF_SIGNIFICANCE=0.1
+for w in  os.listdir("time_series"):
+    df=pd.read_csv("time_series/"+w,delimiter=";")
    
     for p1,p2 in pairs:
         filtered=[x for x in zip(df[p1],df[p2]) if x[0]!=INVALID and x[1]!=INVALID]
-        filtered1=[round_down(x[0],precision[w]) for x in filtered]
-        filtered2=[round_down(x[1],precision[w]) for x in filtered]
+        filtered1=[x[0] for x in filtered]
+        filtered2=[x[1] for x in filtered]
         
        # df[p1]=df.apply(lambda row: round_down(row[p1],precision[w]),axis=1)
         #df[p2]=df.apply(lambda row: round_down(row[p2],precision[w]),axis=1)
         #print(np.max(np.abs(df[p1]-df[p2])))
         try:
-            wil=stats.wilcoxon(filtered1,y=filtered2).pvalue
-            kol=stats.ks_2samp(filtered1,filtered2).pvalue
-        
-            print("Wilcoxon",w,p1,p2,wil,wil>=SIGNIFICANCE)
-            print("Kolmogorov",w,p1,p2,kol,kol>=SIGNIFICANCE)
-        except:
-            pass
+            #wil=stats.wilcoxon(filtered1,y=filtered2).pvalue
+            #kol=stats.ks_2samp(filtered1,filtered2).pvalue
+            mx=np.nanmax(filtered)
+            mn=np.nanmin(filtered)
+            span=mx-mn
+            print("Length",len(filtered))
+            print("span",p1,p2,w,mx,mn,span)
+            rel_diff=[abs(x[0]-x[1])/span for x in filtered]
+            outliners_share=len([r for r in rel_diff if r >=DIFF_SIGNIFICANCE])/len(rel_diff)
+            print(p1,p2,w,outliners_share)
+            #print("Wilcoxon",w,p1,p2,wil,wil>=SIGNIFICANCE)
+            #print("Kolmogorov",w,p1,p2,kol,kol>=SIGNIFICANCE)
+            #print(p1,p2,w)
+            #print("Span diff",rel_diff)
+        except Exception as ex:
+            raise ex
         print()
