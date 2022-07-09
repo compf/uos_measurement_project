@@ -60,7 +60,7 @@ class APIWeatherInfo:
         plt.bar(x-0.3, list(self.correlations['avg_rtt'].values()), width, color='r', edgecolor='black', label='Avg. RTT')
         plt.bar(x-0.1, list(self.correlations['max_rtt'].values()), width, color='g', edgecolor='black', label='Max. RTT')
         plt.bar(x+0.1, list(self.correlations['min_rtt'].values()), width, color='b', edgecolor='black', label='Min. RTT')
-        plt.bar(x+0.3, list(self.correlations['loss'].values()),    width, color='y', edgecolor='black', label='Loss')
+        #plt.bar(x+0.3, list(self.correlations['loss'].values()),    width, color='y', edgecolor='black', label='Loss')
 
         plt.xticks(x, [kind for kind in self.weather])
         plt.ylabel('Correlation')
