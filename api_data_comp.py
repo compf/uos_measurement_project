@@ -24,12 +24,16 @@ def round_down(m, n):
         return m
     return m // n * n
 pairs=[a for a in itertools.product(weather_api,weather_api) if a[0]!=a[1]]
-SIGNIFICANCE=0.01
+OUTLINERS_SIGNIFICANCE=0.05
 DIFF_SIGNIFICANCE=0.1
+weather_comp_stats=dict()
+api_similar=dict()
 for w in  os.listdir("time_series"):
     df=pd.read_csv("time_series/"+w,delimiter=";")
    
     for p1,p2 in pairs:
+        if p1 not in df or p2 not in df:
+            continue
         filtered=[x for x in zip(df[p1],df[p2]) if x[0]!=INVALID and x[1]!=INVALID]
         filtered1=[x[0] for x in filtered]
         filtered2=[x[1] for x in filtered]
@@ -43,15 +47,28 @@ for w in  os.listdir("time_series"):
             mx=np.nanmax(filtered)
             mn=np.nanmin(filtered)
             span=mx-mn
-            print("Length",len(filtered))
-            print("span",p1,p2,w,mx,mn,span)
+            if np.isnan(span):
+                continue
+            #print("Length",len(filtered))
+            #print("span",p1,p2,w,mx,mn,span)
             rel_diff=[abs(x[0]-x[1])/span for x in filtered]
             outliners_share=len([r for r in rel_diff if r >=DIFF_SIGNIFICANCE])/len(rel_diff)
-            print(p1,p2,w,outliners_share)
-            #print("Wilcoxon",w,p1,p2,wil,wil>=SIGNIFICANCE)
-            #print("Kolmogorov",w,p1,p2,kol,kol>=SIGNIFICANCE)
-            #print(p1,p2,w)
-            #print("Span diff",rel_diff)
+            if w.startswith("humidity"):
+                print(p1,p2,mx,mn,span,outliners_share,np.nanmax(rel_diff))
+            if outliners_share <OUTLINERS_SIGNIFICANCE and outliners_share>0:
+                if w not in weather_comp_stats:
+                    weather_comp_stats[w]=[]
+                    api_similar[w]=set()
+                weather_comp_stats[w]+=[(p1,p2,mx,mn,span,outliners_share)]
+                api_similar[w]=api_similar[w] | {p1, p2}
         except Exception as ex:
             raise ex
-        print()
+print("#"*100)
+for k in weather_comp_stats:
+    print(k)
+    for x in weather_comp_stats[k]:
+        print(x)
+    print(api_similar[k])
+    print()
+
+        

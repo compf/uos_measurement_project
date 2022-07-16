@@ -4,7 +4,7 @@ import abstract_weather_api
 import numpy as np
 def transform(value,a,w):
     if (a=="WeatherAPI" or a=="Aeris") and w=="wind_speed":
-        return value/3.6
+        return value/3.6 #konvert to m/s
     elif value==False:
         return 0
     elif value==True:
@@ -18,7 +18,7 @@ weather_api=[t.__name__ for  t in abstract_weather_api.apis_dict_reversed]
 INVALID=-1000
 series=dict()
 for fname in os.listdir("project_archive"):
-    if fname=="forecast":
+    if fname=="forecast" or os.path.getsize("project_archive/"+fname)==0:
         continue
     with open("project_archive/"+fname) as f:
         json_obj=json.load(f)
