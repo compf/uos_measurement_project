@@ -58,7 +58,7 @@ class WeatherGraph:
                 ax=ax.twinx()
                 first_iteration=False
             ax.plot(self.x_values,pair[0],label=pair[1],color=colors[counter])
-    
+            ax.set_ylabel(pair[1])
             counter+=1
             if first_iteration==None:
                 first_iteration=True
@@ -217,6 +217,8 @@ class ByWeatherKindDataLoader(AbstractDataLoader):
         self.timespan=timespan
     def process_weather_data(self,weather_data,kind):
         pass
+    def get_unit(self):
+        pass
     def get_stat_name(self)->str:
         pass
     def is_time_ok(self,t,json_obj):
@@ -260,11 +262,11 @@ class ByWeatherKindDataLoader(AbstractDataLoader):
                     weather_data[weather].append(json_obj["time"])
             self.process_weather_data(weather_data,kind)
             weather_sorted=sorted(weather_data.keys())
-            aggregration_methods={"min":np.min,"avg":np.mean,"max":np.max}
+            aggregration_methods={"min":np.min,"avg":np.mean,"max":np.max,"med":np.median}
 
             for aggr in aggregration_methods:
                 path=f"graphs/weather_{self.get_stat_name()}/{kind}/{aggr}/{self.api_name}_{self.weather_kind}"+EXTENSION
-                inf=WeatherGraphInformation(self.weather_kind+"->"+self.get_stat_name(),self.weather_kind +" from "+ self.api_name,self.get_stat_name(),path,"")
+                inf=WeatherGraphInformation(self.weather_kind+"->"+self.get_stat_name(),self.weather_kind +" from "+ self.api_name,[self.get_stat_name()+"["+self.get_unit()+"]"],path,"")
                 x_values=weather_sorted
                 y_values=[aggregration_methods[aggr](weather_data[w]) for w in weather_sorted]
                 result.append(WeatherGraph(x_values,[y_values],inf))
@@ -283,6 +285,8 @@ class   ByWeatherKindPingDataLoader(ByWeatherKindDataLoader):
             return "ping_day"
         else:
             return "ping_night"
+    def get_unit(self):
+        return "ms"
     def load(self) -> List[WeatherGraph]:
         return super().load()
     def process_weather_data(self,weather_data,kind):
@@ -307,6 +311,8 @@ class ByWeatherKindThroughput(ByWeatherKindDataLoader):
             return "Throughput_day"
         else:
             return "Throughput_night"
+    def get_unit(self):
+        return "Bit/s"
     def process_weather_data(self, weather_data, kind):
         remove=[]
         for w in weather_data:
@@ -329,6 +335,8 @@ class ByWeatherKindRetransmission(ByWeatherKindDataLoader):
             return "Retransmission_day"
         else:
             return "Retransmission_night"
+    def get_unit(self):
+        return "dimensionless"
     def process_weather_data(self, weather_data, kind):
         remove=[]
         for w in weather_data:

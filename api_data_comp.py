@@ -8,7 +8,7 @@ weather_kinds = vars(abstract_weather_api.WeatherInformation()).keys()
 weather_kinds_ignore = {"time", "last_updated", "location", "sun_rise", "description", "sun_set"}
 weather_kinds = [w for w in weather_kinds if w not in weather_kinds_ignore]
 weather_api={t.__name__ for  t in abstract_weather_api.apis_dict_reversed}
-weather_api=weather_api-{"AccuWeather"}
+weather_api=weather_api-{"AccuWeather","Meteomatics"}
 
 precision={
     "temperature":5,
