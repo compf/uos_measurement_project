@@ -54,7 +54,7 @@ for w in  os.listdir("time_series"):
             rel_diff=[abs(x[0]-x[1])/span for x in filtered]
             outliners_share=len([r for r in rel_diff if r >=DIFF_SIGNIFICANCE])/len(rel_diff)
             if w.startswith("humidity"):
-                print(p1,p2,mx,mn,span,outliners_share,np.nanmax(rel_diff))
+                print("Humidity",p1,p2,mx,mn,span,outliners_share,np.nanmax(rel_diff))
             if outliners_share <OUTLINERS_SIGNIFICANCE and outliners_share>0:
                 if w not in weather_comp_stats:
                     weather_comp_stats[w]=[]
