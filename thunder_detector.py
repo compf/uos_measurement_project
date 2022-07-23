@@ -17,9 +17,9 @@ def is_thunder(descr,time,api)->bool:
         return False
 api_times=set()
 
-for p in os.listdir("../project_archive/"):
+for p in os.listdir("project_archive/"):
    
-    with open("../project_archive/"+p) as f:
+    with open("project_archive/"+p) as f:
         json_obj=json.load(f)
         time=json_obj["time"]
         for a in json_obj["weather"]:
