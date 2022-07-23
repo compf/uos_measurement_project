@@ -7,6 +7,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import abstract_weather_api
 import numpy as np
+import pickle5 as pickle
 EXTENSION=".svg"
 apis_names =[
     "BuienRadar",
@@ -20,12 +21,12 @@ apis_names =[
 ]
 weather_kinds=vars(abstract_weather_api.WeatherInformation()).keys()
 weather_kinds_ignore={"time","last_updated","location","sun_rise","description","sun_set"}
-weather_kinds=[w for w in weather_kinds if w not in weather_kinds_ignore]
+weather_kinds=[w for w in weather_kinds if w not in weather_kinds_ignore]+["rain_binary"]
 
 
 raw_json_data = None
 time_jsonObj=dict()
-
+path_pyfig_pickled_dict=dict()
 class WeatherGraphInformation:
     def __init__(self, title: str, x_label: str, y_labels: List[str], path: str,kind:str) -> None:
         self.title = title
@@ -45,11 +46,12 @@ class WeatherGraph:
         self.information = information
     def draw(self):
         colors=["blue","red","green"]
-        fig=plt.figure()
+        fig=plt.figure(figsize=[32,32])
         ax = fig.add_subplot(111)
         plt.title(self.information.title)
         plt.xlabel(self.information.x_label)
         first_iteration=None
+        plt.rcParams['svg.fonttype'] = 'none'
         counter=0
         lns=[]
         lbls=[]
@@ -65,7 +67,8 @@ class WeatherGraph:
         base_path=os.path.dirname(self.information.path)
         os.makedirs(base_path,exist_ok=True)
         fig.legend()
-        plt.savefig(self.information.path)
+        plt.savefig(self.information.path, bbox_inches = "tight")
+        path_pyfig_pickled_dict[self.information.path]=pickle.dumps(fig)
         plt.close()
 
 class AbstractDataLoader:
@@ -135,6 +138,8 @@ def get_weather_data(json_obj,api_name,weather_kind)->any:
     b= api_name in json_obj["weather"] and   json_obj["weather"][api_name]!=None  and weather_kind in json_obj["weather"][api_name]
     if b:
         return json_obj["weather"][api_name][weather_kind]
+    elif weather_kind=="rain_binary" and  api_name in json_obj["weather"] and   json_obj["weather"][api_name]!=None  and "rain" in json_obj["weather"][api_name] and json_obj["weather"][api_name]["rain"]!=None:
+          return 1 if  json_obj["weather"][api_name]["rain"]>0 else 0
     else:
         return None
 
@@ -387,3 +392,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+    with open("graphs/pickled.bin","wb") as f:
+        pickle.dump(path_pyfig_pickled_dict,f)
