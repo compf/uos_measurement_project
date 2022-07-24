@@ -68,7 +68,8 @@ class WeatherGraph:
         os.makedirs(base_path,exist_ok=True)
         fig.legend()
         plt.savefig(self.information.path, bbox_inches = "tight")
-        path_pyfig_pickled_dict[self.information.path]=pickle.dumps(fig)
+        with open(self.information.path.replace(EXTENSION,".bin"),"wb") as f:
+            pickle.dump(fig,f)
         plt.close()
 
 class AbstractDataLoader:
@@ -392,5 +393,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-    with open("graphs/pickled.bin","wb") as f:
-        pickle.dump(path_pyfig_pickled_dict,f)
+  
