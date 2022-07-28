@@ -10,7 +10,7 @@ apis_names = [
     'Weatherbit'
 ]
 
-ARCHIVE_PATH    = './osnabrueck/project_archive_osna'
+ARCHIVE_PATH    = './osnabrueck/Westerberg_13_06_to_10_07'
 HISTORIC_PATH   = './osnabrueck/historic_data_osna'
 DATA_PATH       = './osnabrueck/'
 
@@ -80,7 +80,7 @@ def is_night(timestamp):
 
 def main():
     json_files_archive = os.listdir(ARCHIVE_PATH)
-    json_files_historic = os.listdir(HISTORIC_PATH)
+    # json_files_historic = os.listdir(HISTORIC_PATH)
     data_archive, data_historic = [], []
 
     for json_file in json_files_archive:
@@ -89,25 +89,32 @@ def main():
         with open(ARCHIVE_PATH + '/' + json_file) as f:
             data_archive.append(json.load(f))
 
-    for json_file in json_files_historic:
-        if json_file == "forecast":
-            continue
-        with open(HISTORIC_PATH + '/' + json_file) as f:
-            data = json.load(f)
-            for d in data['data']:
-                data_historic.append(d)
+    # for json_file in json_files_historic:
+    #    if json_file == "forecast":
+    #        continue
+    #    with open(HISTORIC_PATH + '/' + json_file) as f:
+    #        data = json.load(f)
+    #        for d in data['data']:
+    #            data_historic.append(d)
 
     data_archive = sorted(data_archive, key = lambda x : x['time'])
-    data_historic = sorted(data_historic, key = lambda x : x['ts'])
+    # data_historic = sorted(data_historic, key = lambda x : x['ts'])
 
     measurement_data_1 = pd.read_csv(DATA_PATH + 'ceragon_RxLevel_7d.txt', sep=';', header=None)
     measurement_data_1.columns = ['ts', 'rx_power', '']
     measurement_data_2 = pd.read_csv(DATA_PATH + 'ceragon_RxLevel_7d_2.txt', sep=';', header=None)
     measurement_data_2.columns = ['ts', 'rx_power', '']
-    measurement_data = pd.concat([measurement_data_1, measurement_data_2])
+    measurement_data_3 = pd.read_csv(DATA_PATH + 'ceragon_RxLevel_7d_3.txt', sep=';', header=None)
+    measurement_data_3.columns = ['ts', 'rx_power', '']
+    measurement_data_4 = pd.read_csv(DATA_PATH + 'ceragon_RxLevel_7d_4.txt', sep=';', header=None)
+    measurement_data_4.columns = ['ts', 'rx_power', '']
+    measurement_data_5 = pd.read_csv(DATA_PATH + 'ceragon_RxLevel_7d_5.txt', sep=';', header=None)
+    measurement_data_5.columns = ['ts', 'rx_power', '']
+    measurement_data = pd.concat([measurement_data_1, measurement_data_2, measurement_data_3, 
+        measurement_data_4, measurement_data_5])
     
-    apiWeatherInformations = [APIWeatherInfo('WesterbergWetter'), APIWeatherInfo('Weatherbit')]
-    apiWeatherInformations_night = [APIWeatherInfo('WesterbergWetter'), APIWeatherInfo('Weatherbit')]
+    apiWeatherInformations = [APIWeatherInfo('WesterbergWetter')] #, APIWeatherInfo('Weatherbit')]
+    apiWeatherInformations_night = [APIWeatherInfo('WesterbergWetter')] #, APIWeatherInfo('Weatherbit')]
 
     for d in data_archive:
         try:
@@ -127,33 +134,33 @@ def main():
                 apiWeatherInformations[0].measurement_results['rx_power'].append(- row['rx_power'])
                 break
 
-    for d in data_historic:
-        for index, row in measurement_data.iterrows():
-            if abs(d['ts'] - int(row['ts'])) < 600:
-                if is_night(d['ts']):
-                    apiWeatherInformations_night[1].times.append(d['ts'])
-                    for kind in weather_kinds:
-                        if kind == 'temperature':
-                            apiWeatherInformations_night[1].weather[kind].append(d['temp'])
-                        elif kind == 'humidity':
-                            apiWeatherInformations_night[1].weather[kind].append(d['rh'])
-                        elif kind == 'wind_speed':
-                            apiWeatherInformations_night[1].weather[kind].append(d['wind_spd'])
-                        elif kind == 'air_pressure':
-                            apiWeatherInformations_night[1].weather[kind].append(d['pres'])
-                    apiWeatherInformations_night[1].measurement_results['rx_power'].append(- row['rx_power'])
-                apiWeatherInformations[1].times.append(d['ts'])
-                for kind in weather_kinds:
-                    if kind == 'temperature':
-                        apiWeatherInformations[1].weather[kind].append(d['temp'])
-                    elif kind == 'humidity':
-                        apiWeatherInformations[1].weather[kind].append(d['rh'])
-                    elif kind == 'wind_speed':
-                        apiWeatherInformations[1].weather[kind].append(d['wind_spd'])
-                    elif kind == 'air_pressure':
-                        apiWeatherInformations[1].weather[kind].append(d['pres'])
-                apiWeatherInformations[1].measurement_results['rx_power'].append(- row['rx_power'])
-                break
+    # for d in data_historic:
+    #    for index, row in measurement_data.iterrows():
+    #        if abs(d['ts'] - int(row['ts'])) < 600:
+    #            if is_night(d['ts']):
+    #                apiWeatherInformations_night[1].times.append(d['ts'])
+    #                for kind in weather_kinds:
+    #                    if kind == 'temperature':
+    #                        apiWeatherInformations_night[1].weather[kind].append(d['temp'])
+    #                    elif kind == 'humidity':
+    #                        apiWeatherInformations_night[1].weather[kind].append(d['rh'])
+    #                    elif kind == 'wind_speed':
+    #                        apiWeatherInformations_night[1].weather[kind].append(d['wind_spd'])
+    #                    elif kind == 'air_pressure':
+    #                        apiWeatherInformations_night[1].weather[kind].append(d['pres'])
+    #                apiWeatherInformations_night[1].measurement_results['rx_power'].append(- row['rx_power'])
+    #            apiWeatherInformations[1].times.append(d['ts'])
+    #            for kind in weather_kinds:
+    #                if kind == 'temperature':
+    #                    apiWeatherInformations[1].weather[kind].append(d['temp'])
+    #                elif kind == 'humidity':
+    #                    apiWeatherInformations[1].weather[kind].append(d['rh'])
+    #                elif kind == 'wind_speed':
+    #                    apiWeatherInformations[1].weather[kind].append(d['wind_spd'])
+    #                elif kind == 'air_pressure':
+    #                    apiWeatherInformations[1].weather[kind].append(d['pres'])
+    #            apiWeatherInformations[1].measurement_results['rx_power'].append(- row['rx_power'])
+    #            break
 
     for apiWeatherInfo in apiWeatherInformations:
         apiWeatherInfo.get_correlations()

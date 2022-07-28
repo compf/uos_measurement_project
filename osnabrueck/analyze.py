@@ -1,22 +1,21 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import csv
+import csv, sys
 import os
-import json
+import json 
 weather_kinds_ignore = {"time", "last_updated", "location", "sun_rise", "description", "sun_set"}
 
-filenames=["ceragon_RxLevel_7d.txt","ceragon_RxLevel_7d_2.txt"]
-filenames=filenames[1:]
+filenames=["ceragon_RxLevel_7d.txt","ceragon_RxLevel_7d_2.txt","ceragon_RxLevel_7d_3.txt","ceragon_RxLevel_7d_4.txt","ceragon_RxLevel_7d_5.txt"]
+# filenames=filenames[1:]
 weather_data=dict()
-for p in os.listdir("project_archive_osna"):
-
-    with open("project_archive_osna/"+p) as f:
+for p in os.listdir('./osnabrueck/Westerberg_13_06_to_10_07'):
+    with open("./osnabrueck/Westerberg_13_06_to_10_07/"+p) as f:
         json_obj=json.load(f)
         if json_obj["weather"]!={}:
             weather_data[json_obj["time"]]=json_obj["weather"]["WesterbergWetter"]
 
 for p in filenames:
-    with open(p) as f:
+    with open('./osnabrueck/'+p) as f:
         x=[]
         y=[]
         for line in csv.reader(f,delimiter=";"):
