@@ -1,4 +1,4 @@
-import os, json, sys, math
+import os, json, sys, math, pickle
 from datetime import datetime
 import matplotlib.pyplot as plt
 import abstract_weather_api
@@ -39,7 +39,6 @@ class APIWeatherInfo:
                     y = [int(float(i)) for i in self.weather[kind]]
                     y = np.array(y)
                     r = np.corrcoef(x, y)[0, 1]
-                    print(r,correlation)
                     if math.isnan(r):
                         self.correlations[correlation][kind] = 0
                     else:
@@ -54,7 +53,7 @@ class APIWeatherInfo:
 
         plt.xticks(x, [kind for kind in self.weather])
         plt.ylabel('Correlation')
-        plt.title(f'Correlation of API \'{self.api_name}\' with weather in OS', fontsize=14)
+        plt.title(f'Correlation of API \'{self.api_name}\' with signal strength', fontsize=14)
         plt.legend(loc='upper right')
         plt.grid()
         plt.ylim(-1, 1)
@@ -63,7 +62,42 @@ class APIWeatherInfo:
             plt.savefig(f'./osnabrueck/correlations_rxpower_night_{self.api_name}.pdf')
         else:
             plt.savefig(f'./osnabrueck/correlations_rxpower_{self.api_name}.pdf')
-        plt.clf()
+        plt.close()
+
+    def plot_single_condition(self, night=False):
+        for kind in self.weather:
+            # zu jedem Datenpunkt in 'kind' Durchschnitt aller Signalstärken bilden 
+            plot_data = {}
+            for i in range(len(self.weather[kind])):
+                if self.weather[kind][i] in plot_data:
+                    plot_data[self.weather[kind][i]].append(self.measurement_results['rx_power'][i])
+                else:
+                    plot_data[self.weather[kind][i]] = [self.measurement_results['rx_power'][i]]
+
+            for item in plot_data:
+                plot_data[item] = np.mean(plot_data[item])
+
+            plot_df = pd.DataFrame(list(zip(plot_data.keys(), plot_data.values())), columns = [kind, 'rx_power'])
+
+            if plot_df.empty:
+                continue
+            
+            plot_df[kind] = pd.to_numeric(plot_df[kind])
+            plot_df = plot_df.sort_values(by = [kind])
+            
+            ax1 = plot_df.plot(x = str(kind), y = 'rx_power')
+            ax1.set_ylabel('RX Power (dBm)')
+            ax1.legend(['RX power'])
+            if kind == 'temperature':
+                ax1.set_xlabel('Temperature (°C)')
+            elif kind == 'humidity':
+                ax1.set_xlabel('Humidity (%)')
+            
+            if night:
+                plt.savefig(f'./osnabrueck/plot_{str(kind)}_rxpower_{self.api_name}_night.pdf')
+            else:
+                plt.savefig(f'./osnabrueck/plot_{str(kind)}_rxpower_{self.api_name}.pdf')
+            plt.close()
 
 
 def is_night(timestamp):
@@ -79,96 +113,108 @@ def is_night(timestamp):
     return (timestamp < sun_rise or timestamp > sun_set)
 
 def main():
-    json_files_archive = os.listdir(ARCHIVE_PATH)
-    # json_files_historic = os.listdir(HISTORIC_PATH)
-    data_archive, data_historic = [], []
+    try:
+        with open('apiWeatherInformations.pickle', 'rb') as handle:
+            apiWeatherInformations = pickle.load(handle)
+        with open('apiWeatherInformations_night.pickle', 'rb') as handle:
+            apiWeatherInformations_night = pickle.load(handle)
+        print('pickle files found')
+    except:
+        print('new run, pickle files not found')
+        json_files_archive = os.listdir(ARCHIVE_PATH)
+        json_files_historic = os.listdir(HISTORIC_PATH)
+        data_archive, data_historic = [], []
 
-    for json_file in json_files_archive:
-        if json_file == "forecast":
-            continue
-        with open(ARCHIVE_PATH + '/' + json_file) as f:
-            data_archive.append(json.load(f))
+        for json_file in json_files_archive:
+            if json_file == "forecast":
+                continue
+            with open(ARCHIVE_PATH + '/' + json_file) as f:
+                data_archive.append(json.load(f))
 
-    # for json_file in json_files_historic:
-    #    if json_file == "forecast":
-    #        continue
-    #    with open(HISTORIC_PATH + '/' + json_file) as f:
-    #        data = json.load(f)
-    #        for d in data['data']:
-    #            data_historic.append(d)
+        for json_file in json_files_historic:
+            if json_file == "forecast":
+                continue
+            with open(HISTORIC_PATH + '/' + json_file) as f:
+                data = json.load(f)
+                for d in data['data']:
+                    data_historic.append(d)
 
-    data_archive = sorted(data_archive, key = lambda x : x['time'])
-    # data_historic = sorted(data_historic, key = lambda x : x['ts'])
+        data_archive = sorted(data_archive, key = lambda x : x['time'])
+        data_historic = sorted(data_historic, key = lambda x : x['ts'])
 
-    measurement_data_1 = pd.read_csv(DATA_PATH + 'ceragon_RxLevel_7d.txt', sep=';', header=None)
-    measurement_data_1.columns = ['ts', 'rx_power', '']
-    measurement_data_2 = pd.read_csv(DATA_PATH + 'ceragon_RxLevel_7d_2.txt', sep=';', header=None)
-    measurement_data_2.columns = ['ts', 'rx_power', '']
-    measurement_data_3 = pd.read_csv(DATA_PATH + 'ceragon_RxLevel_7d_3.txt', sep=';', header=None)
-    measurement_data_3.columns = ['ts', 'rx_power', '']
-    measurement_data_4 = pd.read_csv(DATA_PATH + 'ceragon_RxLevel_7d_4.txt', sep=';', header=None)
-    measurement_data_4.columns = ['ts', 'rx_power', '']
-    measurement_data_5 = pd.read_csv(DATA_PATH + 'ceragon_RxLevel_7d_5.txt', sep=';', header=None)
-    measurement_data_5.columns = ['ts', 'rx_power', '']
-    measurement_data = pd.concat([measurement_data_1, measurement_data_2, measurement_data_3, 
-        measurement_data_4, measurement_data_5])
-    
-    apiWeatherInformations = [APIWeatherInfo('WesterbergWetter')] #, APIWeatherInfo('Weatherbit')]
-    apiWeatherInformations_night = [APIWeatherInfo('WesterbergWetter')] #, APIWeatherInfo('Weatherbit')]
+        measurement_data = pd.DataFrame([])
+        for file in ['ceragon_RxLevel_7d.txt', 'ceragon_RxLevel_7d_2.txt', 'ceragon_RxLevel_7d_3.txt',
+                'ceragon_RxLevel_7d_4.txt', 'ceragon_RxLevel_7d_5.txt']:
+            data = pd.read_csv(DATA_PATH + file, sep=';', header=None)
+            data.columns = ['ts', 'rx_power', '']
+            measurement_data = pd.concat([measurement_data, data])
 
-    for d in data_archive:
-        try:
-            d['weather']['WesterbergWetter']['temperature']
-        except Exception as e:
-            continue
-        for index, row in measurement_data.iterrows():
-            if abs(d['time'] - int(row['ts'])) < 600:
-                if is_night(d['time']):
-                    apiWeatherInformations_night[0].times.append(d['time'])
+        measurement_data = measurement_data.sort_values(by = ['ts'])
+        
+        apiWeatherInformations = [APIWeatherInfo('WesterbergWetter'), APIWeatherInfo('Weatherbit')]
+        apiWeatherInformations_night = [APIWeatherInfo('WesterbergWetter'), APIWeatherInfo('Weatherbit')]
+
+        for d in data_archive:
+            try:
+                d['weather']['WesterbergWetter']['temperature']
+            except Exception as e:
+                continue
+            for index, row in measurement_data.iterrows():
+                if abs(d['time'] - int(row['ts'])) < 600:
+                    if is_night(d['time']):
+                        apiWeatherInformations_night[0].times.append(d['time'])
+                        for kind in weather_kinds:
+                            apiWeatherInformations_night[0].weather[kind].append(d['weather']['WesterbergWetter'][kind])
+                        apiWeatherInformations_night[0].measurement_results['rx_power'].append(- row['rx_power'])
+                    apiWeatherInformations[0].times.append(d['time'])
                     for kind in weather_kinds:
-                        apiWeatherInformations_night[0].weather[kind].append(d['weather']['WesterbergWetter'][kind])
-                    apiWeatherInformations_night[0].measurement_results['rx_power'].append(- row['rx_power'])
-                apiWeatherInformations[0].times.append(d['time'])
-                for kind in weather_kinds:
-                    apiWeatherInformations[0].weather[kind].append(d['weather']['WesterbergWetter'][kind])
-                apiWeatherInformations[0].measurement_results['rx_power'].append(- row['rx_power'])
-                break
+                        apiWeatherInformations[0].weather[kind].append(d['weather']['WesterbergWetter'][kind])
+                    apiWeatherInformations[0].measurement_results['rx_power'].append(- row['rx_power'])
+                    break
 
-    # for d in data_historic:
-    #    for index, row in measurement_data.iterrows():
-    #        if abs(d['ts'] - int(row['ts'])) < 600:
-    #            if is_night(d['ts']):
-    #                apiWeatherInformations_night[1].times.append(d['ts'])
-    #                for kind in weather_kinds:
-    #                    if kind == 'temperature':
-    #                        apiWeatherInformations_night[1].weather[kind].append(d['temp'])
-    #                    elif kind == 'humidity':
-    #                        apiWeatherInformations_night[1].weather[kind].append(d['rh'])
-    #                    elif kind == 'wind_speed':
-    #                        apiWeatherInformations_night[1].weather[kind].append(d['wind_spd'])
-    #                    elif kind == 'air_pressure':
-    #                        apiWeatherInformations_night[1].weather[kind].append(d['pres'])
-    #                apiWeatherInformations_night[1].measurement_results['rx_power'].append(- row['rx_power'])
-    #            apiWeatherInformations[1].times.append(d['ts'])
-    #            for kind in weather_kinds:
-    #                if kind == 'temperature':
-    #                    apiWeatherInformations[1].weather[kind].append(d['temp'])
-    #                elif kind == 'humidity':
-    #                    apiWeatherInformations[1].weather[kind].append(d['rh'])
-    #                elif kind == 'wind_speed':
-    #                    apiWeatherInformations[1].weather[kind].append(d['wind_spd'])
-    #                elif kind == 'air_pressure':
-    #                    apiWeatherInformations[1].weather[kind].append(d['pres'])
-    #            apiWeatherInformations[1].measurement_results['rx_power'].append(- row['rx_power'])
-    #            break
+        for d in data_historic:
+            for index, row in measurement_data.iterrows():
+                if abs(d['ts'] - int(row['ts'])) < 600:
+                    if is_night(d['ts']):
+                        apiWeatherInformations_night[1].times.append(d['ts'])
+                        for kind in weather_kinds:
+                            if kind == 'temperature':
+                                apiWeatherInformations_night[1].weather[kind].append(d['temp'])
+                            elif kind == 'humidity':
+                                apiWeatherInformations_night[1].weather[kind].append(d['rh'])
+                            elif kind == 'wind_speed':
+                                apiWeatherInformations_night[1].weather[kind].append(d['wind_spd'])
+                            elif kind == 'air_pressure':
+                                apiWeatherInformations_night[1].weather[kind].append(d['pres'])
+                        apiWeatherInformations_night[1].measurement_results['rx_power'].append(- row['rx_power'])
+                    apiWeatherInformations[1].times.append(d['ts'])
+                    for kind in weather_kinds:
+                        if kind == 'temperature':
+                            apiWeatherInformations[1].weather[kind].append(d['temp'])
+                        elif kind == 'humidity':
+                            apiWeatherInformations[1].weather[kind].append(d['rh'])
+                        elif kind == 'wind_speed':
+                            apiWeatherInformations[1].weather[kind].append(d['wind_spd'])
+                        elif kind == 'air_pressure':
+                            apiWeatherInformations[1].weather[kind].append(d['pres'])
+                    apiWeatherInformations[1].measurement_results['rx_power'].append(- row['rx_power'])
+                    break
+        
+        with open('apiWeatherInformations.pickle', 'wb') as handle:
+            pickle.dump(apiWeatherInformations, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+        with open('apiWeatherInformations_night.pickle', 'wb') as handle:
+            pickle.dump(apiWeatherInformations_night, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     for apiWeatherInfo in apiWeatherInformations:
         apiWeatherInfo.get_correlations()
         apiWeatherInfo.plot()
+        apiWeatherInfo.plot_single_condition()
 
     for apiWeatherInfo in apiWeatherInformations_night:
         apiWeatherInfo.get_correlations()
         apiWeatherInfo.plot(night=True)
+        apiWeatherInfo.plot_single_condition(night=True)
 
 
 if __name__ == "__main__":
