@@ -2,6 +2,7 @@ import os, json, sys, math, time
 import matplotlib.pyplot as plt
 import abstract_weather_api
 import numpy as np
+from datetime import datetime
 from scipy import stats
 SIGNIFICANCE=0.05
 apis_names = [
@@ -22,9 +23,10 @@ weather_kinds_ignore = {"time", "last_updated", "location", "sun_rise", "descrip
 weather_kinds = [w for w in weather_kinds if w not in weather_kinds_ignore]
 
 class APIWeatherInfo:
-    def __init__(self, name):
+    def __init__(self, name,time_type):
         self.api_name = name
         self.times = []
+        self.time_type=time_type
         self.measurement_results = {
             'avg_rtt': [],
             'max_rtt': [],
@@ -39,7 +41,33 @@ class APIWeatherInfo:
             "iperf_retransmission":{}}
         self.significance = {'avg_rtt': {}, 'max_rtt': {}, 'min_rtt': {},"iperf_throughput":{},
             "iperf_retransmission":{}}
+    def is_time_ok(self,t:float,json_obj):
+        if "OpenWeatherMap" not in  json_obj["weather"]:
+            dt=datetime.fromtimestamp(t)
+            
+            hour=5
+            minute=30
+            #hour,minute=json_obj["weather"]["WeatherBitIO"]["sun_set"].split(":")
+            dt=datetime(dt.year,dt.month,dt.day,int(hour),int(minute),dt.second)
+          
+            sun_rise=dt.timestamp()
+            #hour,minute=json_obj["weather"]["WeatherBitIO"]["sun_rise"].split(":")
+            # defining sunset only when it is clearly dark because 19:00 it is still too light
+            # still need to find better time
+            hour=23
+            minute=59
+            dt=datetime(dt.year,dt.month,dt.day,int(hour),int(minute),dt.second)
 
+            sun_set=dt.timestamp()
+        else:
+            sun_set=json_obj["weather"]["OpenWeatherMap"]["sun_set"]
+            sun_rise=json_obj["weather"]["OpenWeatherMap"]["sun_rise"]
+        if self.time_type=="day":
+            return t>= sun_rise and t<=sun_set
+        elif self.time_type== "night":
+            return t<sun_rise or t>sun_set
+        else: 
+            return True
     def get_correlations(self):
         for kind in self.weather:
             for correlation in self.correlations:
@@ -81,7 +109,7 @@ class APIWeatherInfo:
         plt.grid()
         plt.ylim(-1, 1)
         plt.tight_layout()
-        plt.savefig(f'./correlationgraphs/correlations_rtt_{self.api_name}.pdf')
+        plt.savefig(f'./correlationgraphs/correlations_rtt_{self.api_name}_{self.time_type}.pdf')
         plt.clf()
 
         plt.bar(x-0.2, list(self.correlations['iperf_throughput'].values()), width, color='r', edgecolor='black', label='Iperf throughput')
@@ -95,7 +123,7 @@ class APIWeatherInfo:
         plt.axhline(y=0,color="black")
         plt.ylim(-1, 1)
         plt.tight_layout()
-        plt.savefig(f'./correlationgraphs/correlations_iperf_{self.api_name}.pdf')
+        plt.savefig(f'./correlationgraphs/correlations_iperf_{self.api_name}_{self.time_type}.pdf')
         plt.clf()
 
 
@@ -114,7 +142,9 @@ def main():
     
     apiWeatherInformations = []
     for api in apis_names:
-        apiWeatherInformations.append(APIWeatherInfo(api))
+        apiWeatherInformations.append(APIWeatherInfo(api,"all"))
+        apiWeatherInformations.append(APIWeatherInfo(api,"day"))
+        apiWeatherInformations.append(APIWeatherInfo(api,"night"))
 
     for d in data:
         for api in apis_names:
@@ -122,6 +152,8 @@ def main():
                 continue
             for apiWeatherInfo in apiWeatherInformations:
                 if apiWeatherInfo.api_name == api:
+                    if  not apiWeatherInfo.is_time_ok(d["time"],d):
+                        continue
                     apiWeatherInfo.times.append(d['time'])
                     apiWeatherInfo.measurement_results['avg_rtt'].append(d['ping_result']['avg_rtt'])
                     apiWeatherInfo.measurement_results['max_rtt'].append(d['ping_result']['max_rtt'])
