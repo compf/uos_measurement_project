@@ -69,6 +69,8 @@ class APIWeatherInfo:
         else: 
             return True
     def get_correlations(self):
+        NO_SIGNIFICANCE=-1000
+        HAS_SIGNIFICANCE=0.5
         for kind in self.weather:
             for correlation in self.correlations:
                 x = np.array(self.measurement_results[correlation])
@@ -80,13 +82,13 @@ class APIWeatherInfo:
                     print(r,p,correlation,kind,self.api_name,p<SIGNIFICANCE)
                     if math.isnan(r):
                         self.correlations[correlation][kind] = 0
-                        self.significance[correlation][kind] =0
+                        self.significance[correlation][kind] =NO_SIGNIFICANCE
                     else:
                         self.correlations[correlation][kind] = r
-                        self.significance[correlation][kind] =1 if  p<SIGNIFICANCE else 0
+                        self.significance[correlation][kind] =r+np.sign(r)*HAS_SIGNIFICANCE if  p<SIGNIFICANCE else NO_SIGNIFICANCE
                 except Exception as e:
                     self.correlations[correlation][kind] = 0
-                    self.significance[correlation][kind] =0
+                    self.significance[correlation][kind] =NO_SIGNIFICANCE
 
 
     def plot(self):
@@ -97,9 +99,9 @@ class APIWeatherInfo:
         plt.bar(x-0.1, list(self.correlations['max_rtt'].values()), width, color='g', edgecolor='g', label='Max. RTT')
         plt.bar(x+0.1, list(self.correlations['min_rtt'].values()), width, color='b', edgecolor='b', label='Min. RTT')
         
-        plt.bar(x-0.3, list(self.significance['avg_rtt'].values()), width_significance, color='black',  label='_nolegend_')
-        plt.bar(x-0.1, list(self.significance['max_rtt'].values()), width_significance, color='black',  label='_nolegend_')
-        plt.bar(x+0.1, list(self.significance['min_rtt'].values()), width_significance, color='black',  label='_nolegend_')
+        plt.scatter(x-0.3, list(self.significance['avg_rtt'].values()),  c="black", marker="x",  label='_nolegend_')
+        plt.scatter(x-0.1, list(self.significance['max_rtt'].values()),   c="black",marker="x" , label='_nolegend_')
+        plt.scatter(x+0.1, list(self.significance['min_rtt'].values()),   c="black",marker="x"  ,label='_nolegend_')
         #plt.bar(x+0.3, list(self.correlations['loss'].values()),    width, color='y', edgecolor='black', label='Loss')
 
         plt.xticks(x, [kind for kind in self.weather])
@@ -114,13 +116,13 @@ class APIWeatherInfo:
 
         plt.bar(x-0.2, list(self.correlations['iperf_throughput'].values()), width, color='r', edgecolor='black', label='Iperf throughput')
         plt.bar(x,     list(self.correlations['iperf_retransmission'].values()), width, color='g', edgecolor='black', label='Iperf retransmission')
-        plt.bar(x-0.2, list(self.significance['iperf_throughput'].values()), width_significance, color='black',  label='_nolegend_')
-        plt.bar(x, list(self.significance['iperf_retransmission'].values()), width_significance, color='black',  label='_nolegend_')
+        plt.scatter(x-0.2, list(self.significance['iperf_throughput'].values()),  c="black",marker="x",  label='_nolegend_')
+        plt.scatter(x, list(self.significance['iperf_retransmission'].values()),   c="black", marker="x", label='_nolegend_')
         plt.xticks(x, [kind for kind in self.weather])
         plt.ylabel('Correlation')
         plt.title(f'Correlation of API \'{self.api_name}\' with weather in Laar', fontsize=14)
         plt.legend(loc='upper right')
-        plt.axhline(y=0,color="black")
+        plt.grid()
         plt.ylim(-1, 1)
         plt.tight_layout()
         plt.savefig(f'./correlationgraphs/correlations_iperf_{self.api_name}_{self.time_type}.pdf')
@@ -130,7 +132,7 @@ class APIWeatherInfo:
 def main():
     json_files = os.listdir(ARCHIVE_PATH)
     data = []
-
+    print("load")
     for json_file in json_files:
         if json_file=="forecast":
             continue

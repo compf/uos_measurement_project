@@ -3,7 +3,8 @@ import matplotlib.pyplot as plt
 import os
 import pickle5 as pickle
 import sys
-
+if sys.argv[1].endswith(".svg"):
+    sys.argv[1]=sys.argv[1].replace(".svg",".bin")
 with open(sys.argv[2]) as f:
     json_obj=json.load(f)
 with open(sys.argv[1],"rb") as f:
