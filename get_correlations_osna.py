@@ -39,6 +39,7 @@ class APIWeatherInfo:
                     y = [int(float(i)) for i in self.weather[kind]]
                     y = np.array(y)
                     r = np.corrcoef(x, y)[0, 1]
+                    print(f'{self.api_name}: {kind} - {correlation} --> {r}')
                     if math.isnan(r):
                         self.correlations[correlation][kind] = 0
                     else:
