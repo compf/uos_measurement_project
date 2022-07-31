@@ -1,7 +1,7 @@
+# get thunder information from descriptions
 import os
 import json
 import pandas as pd
-
 
 
 thunder_description={"Isolated Thunderstorms",'Thunderstorm with heavy rain','Patchy light rain with thunder',

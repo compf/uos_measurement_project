@@ -1,3 +1,5 @@
+#analyze how close the different APIs are, the output file can be found in the root directory
+# of this project "weather_api_comp_output.txt"
 import pandas as pd
 import scipy.stats as stats
 import os
@@ -42,8 +44,6 @@ for w in  os.listdir("time_series"):
         #df[p2]=df.apply(lambda row: round_down(row[p2],precision[w]),axis=1)
         #print(np.max(np.abs(df[p1]-df[p2])))
         try:
-            #wil=stats.wilcoxon(filtered1,y=filtered2).pvalue
-            #kol=stats.ks_2samp(filtered1,filtered2).pvalue
             mx=np.nanmax(filtered)
             mn=np.nanmin(filtered)
             span=mx-mn
@@ -52,14 +52,15 @@ for w in  os.listdir("time_series"):
             #print("Length",len(filtered))
             #print("span",p1,p2,w,mx,mn,span)
             rel_diff=[abs(x[0]-x[1])/span for x in filtered]
-            outliners_share=len([r for r in rel_diff if r >=DIFF_SIGNIFICANCE])/len(rel_diff)
+            # only outliers, that is values that differ more than 10%, must be analyzed further
+            outliers_share=len([r for r in rel_diff if r >=DIFF_SIGNIFICANCE])/len(rel_diff)
             if w.startswith("humidity"):
-                print("Humidity",p1,p2,mx,mn,span,outliners_share,np.nanmax(rel_diff))
-            if outliners_share <OUTLINERS_SIGNIFICANCE and outliners_share>0:
+                print("Humidity",p1,p2,mx,mn,span,outliers_share,np.nanmax(rel_diff))
+            if outliers_share <OUTLINERS_SIGNIFICANCE and outliers_share>0:
                 if w not in weather_comp_stats:
                     weather_comp_stats[w]=[]
                     api_similar[w]=set()
-                weather_comp_stats[w]+=[(p1,p2,mx,mn,span,outliners_share)]
+                weather_comp_stats[w]+=[(p1,p2,mx,mn,span,outliers_share)]
                 api_similar[w]=api_similar[w] | {p1, p2}
         except Exception as ex:
             raise ex

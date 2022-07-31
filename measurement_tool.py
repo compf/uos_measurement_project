@@ -55,7 +55,7 @@ def iperf(conf_obj):
     return {"bits_per_sec":bitrate,"retransmissions":retr}
 
 
-
+# the forecast information was used to better compare the APIs better but this was uneccessary in the end
 def get_forecast(json_obj,start_time):
     json_path=f"project_archive/forecast/{start_time}.json"
     if os.path.exists(json_path):
@@ -69,5 +69,4 @@ if __name__=="__main__":
     args=parser.parse_args()
     
     main(args)
-    #dummy_obj={"iperf_ip":'37.221.197.246',"iperf_duration":10}
-    #iperf(dummy_obj)
+   

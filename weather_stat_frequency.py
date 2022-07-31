@@ -1,3 +1,4 @@
+#just for testing purposes, find out how often a weather value appears (e.g. temperature)
 import os
 import json
 from typing import Tuple, List

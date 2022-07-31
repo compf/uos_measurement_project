@@ -1,3 +1,4 @@
+# tool to create correlation diagrams
 import os, json, sys, math, time
 import matplotlib.pyplot as plt
 import abstract_weather_api
@@ -51,7 +52,6 @@ class APIWeatherInfo:
             dt=datetime(dt.year,dt.month,dt.day,int(hour),int(minute),dt.second)
           
             sun_rise=dt.timestamp()
-            #hour,minute=json_obj["weather"]["WeatherBitIO"]["sun_rise"].split(":")
             # defining sunset only when it is clearly dark because 19:00 it is still too light
             # still need to find better time
             hour=23
@@ -76,9 +76,11 @@ class APIWeatherInfo:
                 x = np.array(self.measurement_results[correlation])
                 y = np.array(self.weather[kind])
                 if len(x)<len(y):
+                    #cut off y values that have no associated x values
                     y=y[len(y)-len(x):]
                 try:
                     r,p = stats.pearsonr(x,y)
+                    # r is the perarson coefficient, p is the significance 
                     print(r,p,correlation,kind,self.api_name,p<SIGNIFICANCE)
                     if math.isnan(r):
                         self.correlations[correlation][kind] = 0
@@ -147,7 +149,7 @@ def main():
         apiWeatherInformations.append(APIWeatherInfo(api,"all"))
         apiWeatherInformations.append(APIWeatherInfo(api,"day"))
         apiWeatherInformations.append(APIWeatherInfo(api,"night"))
-
+    # load the data
     for d in data:
         for api in apis_names:
             if not api in d['weather'] or d['weather'][api] == None:

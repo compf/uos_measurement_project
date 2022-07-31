@@ -1,5 +1,5 @@
+#here  is all the logic for downloading the weather api data
 import http.client
-#from weatherbit.api import Api
 import requests
 from requests.auth import HTTPBasicAuth
 from datetime import datetime,timedelta

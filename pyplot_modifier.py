@@ -1,8 +1,11 @@
+#used to change a graph via the bin file
+#Hence, not all graphs must be regenerated if one graph must be changed
 import json
 import matplotlib.pyplot as plt
 import os
 import pickle5 as pickle
 import sys
+# if svg file provided, there should be corresponding .bin file, so we replace
 if sys.argv[1].endswith(".svg"):
     sys.argv[1]=sys.argv[1].replace(".svg",".bin")
 with open(sys.argv[2]) as f:

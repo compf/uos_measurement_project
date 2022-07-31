@@ -2,6 +2,7 @@ import os, json, sys, math, time,csv
 import matplotlib.pyplot as plt
 import abstract_weather_api
 import numpy as np
+#converst the JSON dataset to CSV files, which is sometimes useful to better analyze the data
 def transform(value,a,w):
     if (a=="WeatherAPI" or a=="Aeris") and w=="wind_speed":
         return value/3.6 #konvert to m/s

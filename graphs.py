@@ -20,6 +20,7 @@ apis_names =[
    "Foreca"
 ]
 weather_kinds=vars(abstract_weather_api.WeatherInformation()).keys()
+# these are not numeric and cannot be easily processed
 weather_kinds_ignore={"time","last_updated","location","sun_rise","description","sun_set"}
 weather_kinds=[w for w in weather_kinds if w not in weather_kinds_ignore]+["rain_binary"]
 
@@ -33,7 +34,8 @@ class WeatherGraphInformation:
         self.x_label = x_label
         self.y_labels = y_labels
         self.path = path
-        self.kind=kind # TODO find better solution
+        #contain other information that might be relevant
+        self.kind=kind 
 
 
 
@@ -51,10 +53,12 @@ class WeatherGraph:
         plt.title(self.information.title)
         plt.xlabel(self.information.x_label)
         first_iteration=None
+        # force text output
         plt.rcParams['svg.fonttype'] = 'none'
         counter=0
         lns=[]
         lbls=[]
+        #a diagram could contain multiple plots, here we iterating though them
         for pair in zip(self.y_values,self.information.y_labels):
             if first_iteration:
                 ax=ax.twinx()
@@ -68,14 +72,16 @@ class WeatherGraph:
         os.makedirs(base_path,exist_ok=True)
         fig.legend()
         plt.savefig(self.information.path, bbox_inches = "tight")
+        # in order to modify an existing diagram easily, we also store the binary representation of the figure object using pickle
         with open(self.information.path.replace(EXTENSION,".bin"),"wb") as f:
             pickle.dump(fig,f)
         plt.close()
 
 class AbstractDataLoader:
+    # load all data in the file to prevent multiple IO accesses
     def load_all_data(self):
         global raw_json_data,time_jsonObj
-        if raw_json_data == None:
+        if raw_json_data == None: # don't load twice
             self.raw_data = []
             for fname in os.listdir("project_archive"):
                 if fname=="forecast":
@@ -95,7 +101,7 @@ class AbstractDataLoader:
     def load(self) -> List[WeatherGraph]:
         pass
 
-
+# a graph with time on x axis and RTT on y axis
 class TimePingDataLoader(AbstractDataLoader):
     def load(self) -> List[WeatherGraph]:
         result=[]
@@ -110,6 +116,7 @@ class TimePingDataLoader(AbstractDataLoader):
                 y_data[0].append(json_obj["ping_result"][kind])
             result.append(WeatherGraph(x_data,y_data,inf))
         return result
+# a graph with time on x axis and throughput on y axis
 class TimeThroughputDataLoader(AbstractDataLoader):
     def load(self) -> List[WeatherGraph]:
         x_data=[]
@@ -122,6 +129,8 @@ class TimeThroughputDataLoader(AbstractDataLoader):
             
                 y_data.append(json_obj["iperf_result"]["bits_per_sec"])
         return [WeatherGraph(x_data,[y_data],inf)]
+
+# a graph with time on x axis and throughput on y axis
 class TimeRetransmissionDataLoader(AbstractDataLoader):
     def load(self) -> List[WeatherGraph]:
         x_data=[]
@@ -145,6 +154,7 @@ def get_weather_data(json_obj,api_name,weather_kind)->any:
         return None
 
 INVALID=-1
+# a graph that contains the time on the x-axis and also the RTT and the associated weather value of an API
 class TimePingWeatherLoader(TimePingDataLoader):
     def __init__(self,api_name,weather_kind) -> None:
         super().__init__()
@@ -214,6 +224,7 @@ class TimeRetransmissionsWeatherLoader(TimeRetransmissionDataLoader):
                    
                     y_values.append(INVALID)
         return base_result
+# graph that represent the relationship of a weather value and an internet metric
 class ByWeatherKindDataLoader(AbstractDataLoader):
     def __init__(self,api_name,weather_kind,measurement_result_kinds,timespan) -> None:
         super().__init__()
@@ -221,23 +232,26 @@ class ByWeatherKindDataLoader(AbstractDataLoader):
         self.api_name=api_name
         self.weather_kind=weather_kind
         self.timespan=timespan
-    def process_weather_data(self,weather_data,kind):
+    def process_internet_data(self,weather_data,kind):
         pass
     def get_unit(self):
         pass
     def get_stat_name(self)->str:
         pass
+    # checks whether the time is day or night
+    # can be used to filter out times that are not relevant( for instance if one only wants to consider night times)
+    # the decision whether only day or night (or all) times are relevant is stored int the
+    # self.timespan variable
     def is_time_ok(self,t,json_obj):
+        # without OpenWeatherMap we need to find a goo sun rise/set time
         if "OpenWeatherMap" not in  json_obj["weather"]:
             dt=datetime.fromtimestamp(t)
             
             hour=5
             minute=30
-            #hour,minute=json_obj["weather"]["WeatherBitIO"]["sun_set"].split(":")
             dt=datetime(dt.year,dt.month,dt.day,int(hour),int(minute),dt.second)
           
             sun_rise=dt.timestamp()
-            #hour,minute=json_obj["weather"]["WeatherBitIO"]["sun_rise"].split(":")
             # defining sunset only when it is clearly dark because 19:00 it is still too light
             # still need to find better time
             hour=23
@@ -246,6 +260,7 @@ class ByWeatherKindDataLoader(AbstractDataLoader):
 
             sun_set=dt.timestamp()
         else:
+            # get sun  rise/set time from OpenWeatherMap
             sun_set=json_obj["weather"]["OpenWeatherMap"]["sun_set"]
             sun_rise=json_obj["weather"]["OpenWeatherMap"]["sun_rise"]
         if self.timespan==Timespan.DAY:
@@ -260,20 +275,22 @@ class ByWeatherKindDataLoader(AbstractDataLoader):
         for kind in self.measurement_result_kinds:
             weather_data=dict()
             for json_obj in self.raw_data:
-               
+               # get weather at this timestamp at save all times associated with this weather
                 weather= get_weather_data(json_obj,self.api_name,self.weather_kind)
                 if weather!=None:
                     if weather not in weather_data:
                         weather_data[weather]=[]
                     weather_data[weather].append(json_obj["time"])
-            self.process_weather_data(weather_data,kind)
+            self.process_internet_data(weather_data,kind)
             weather_sorted=sorted(weather_data.keys())
+            # use numpy functions to get minimum/maximum etc
             aggregration_methods={"min":np.min,"avg":np.mean,"max":np.max,"med":np.median}
 
             for aggr in aggregration_methods:
                 path=f"graphs/weather_{self.get_stat_name()}/{kind}/{aggr}/{self.api_name}_{self.weather_kind}"+EXTENSION
                 inf=WeatherGraphInformation(self.weather_kind+"->"+self.get_stat_name(),self.weather_kind +" from "+ self.api_name,[self.get_stat_name()+"["+self.get_unit()+"]"],path,"")
                 x_values=weather_sorted
+                #create one value from all internet metrics
                 y_values=[aggregration_methods[aggr](weather_data[w]) for w in weather_sorted]
                 result.append(WeatherGraph(x_values,[y_values],inf))
 
@@ -295,7 +312,7 @@ class   ByWeatherKindPingDataLoader(ByWeatherKindDataLoader):
         return "ms"
     def load(self) -> List[WeatherGraph]:
         return super().load()
-    def process_weather_data(self,weather_data,kind):
+    def process_internet_data(self,weather_data,kind):
         remove=[]
         for w in weather_data:
             res=[]
@@ -319,7 +336,7 @@ class ByWeatherKindThroughput(ByWeatherKindDataLoader):
             return "Throughput_night"
     def get_unit(self):
         return "Bit/s"
-    def process_weather_data(self, weather_data, kind):
+    def process_internet_data(self, weather_data, kind):
         remove=[]
         for w in weather_data:
             res=[]
@@ -329,9 +346,10 @@ class ByWeatherKindThroughput(ByWeatherKindDataLoader):
                     ping=json_obj["iperf_result"]["bits_per_sec"]
                     res.append(ping)
             weather_data[w]=res
+            #if a weather value does never appear during the night/day, it must be discarded
             if len(res)==0:
                 remove.append(w)
-        for r in remove:
+        for r in remove: # remove weather values that never appear during day night
             weather_data.pop(r,None)
 class ByWeatherKindRetransmission(ByWeatherKindDataLoader):
     def get_stat_name(self) -> str:
@@ -343,7 +361,7 @@ class ByWeatherKindRetransmission(ByWeatherKindDataLoader):
             return "Retransmission_night"
     def get_unit(self):
         return "dimensionless"
-    def process_weather_data(self, weather_data, kind):
+    def process_internet_data(self, weather_data, kind):
         remove=[]
         for w in weather_data:
             res=[]
@@ -357,7 +375,7 @@ class ByWeatherKindRetransmission(ByWeatherKindDataLoader):
                 remove.append(w)
         for r in remove:
             weather_data.pop(r,None)
-
+# combination of all weather stats and the APIs
 api_weather_product= list(itertools.product(apis_names,weather_kinds))
 ping_result_kinds=["min_rtt", "avg_rtt", "max_rtt"]
 loaders=[
